@@ -53,8 +53,12 @@
   #score-display { font-size: 22px; font-weight: 800; }
   #combo-display { font-size: 13px; color: #ffd700; opacity: 0; transition: opacity 0.2s; }
   #combo-display.active { opacity: 1; }
+  #fever-display { font-size: 13px; color: #ff4444; opacity: 0; transition: opacity 0.2s; font-weight: 700; }
+  #fever-display.active { opacity: 1; animation: feverPulse 0.4s ease infinite alternate; }
+  @keyframes feverPulse { from { color: #ff4444; } to { color: #ffaa00; } }
   #high-score-display { font-size: 12px; opacity: 0.6; }
   #level-display { font-weight: 700; }
+  #wind-display { font-size: 11px; opacity: 0.6; margin-top: 2px; }
 
   .lives-row { display: flex; gap: 3px; }
   .lives-row span { font-size: 18px; transition: all 0.3s; display: inline-block; }
@@ -89,9 +93,10 @@
     z-index: 20;
     opacity: 0;
     transition: opacity 0.4s ease;
+    overflow-y: auto;
   }
   .screen-overlay.visible { opacity: 1; }
-  .screen-overlay.hidden { display: none; }
+  .screen-overlay.hidden { display: none; pointer-events: none; }
 
   #start-screen {
     background: radial-gradient(ellipse at 50% 40%, rgba(30,30,80,0.92), rgba(5,5,20,0.96));
@@ -104,6 +109,10 @@
   #pause-screen {
     background: rgba(0,0,0,0.7);
     backdrop-filter: blur(8px);
+  }
+
+  #leaderboard-screen {
+    background: radial-gradient(ellipse at 50% 40%, rgba(10,30,80,0.94), rgba(5,5,20,0.97));
   }
 
   .screen-title {
@@ -122,7 +131,7 @@
     font-size: clamp(13px, 2.8vw, 20px);
     opacity: 0.7;
     margin-bottom: 8px;
-    max-width: 400px;
+    max-width: 420px;
     text-align: center;
     line-height: 1.5;
   }
@@ -158,6 +167,8 @@
   }
   .btn-secondary:hover { background: rgba(255,255,255,0.2); box-shadow: none; }
 
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+
   #final-score {
     font-size: clamp(52px, 12vw, 96px);
     font-weight: 900;
@@ -170,7 +181,7 @@
 
   .stats-row {
     display: flex; gap: 24px;
-    margin: 10px 0 20px;
+    margin: 10px 0 16px;
     font-size: 14px; opacity: 0.65;
   }
   .stats-row div { text-align: center; }
@@ -202,6 +213,109 @@
   .float-in-d2 { animation-delay: 0.2s; }
   .float-in-d3 { animation-delay: 0.3s; }
   .float-in-d4 { animation-delay: 0.4s; }
+
+  /* Nickname input */
+  #nickname-section {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0 6px;
+    padding: 16px 24px;
+    background: rgba(255,215,0,0.08);
+    border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 16px;
+  }
+  #nickname-section.visible { display: flex; }
+
+  .qualify-label {
+    font-size: 15px;
+    color: #ffd700;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .new-record-label {
+    font-size: 13px;
+    color: #ff6b35;
+    font-weight: 700;
+    display: none;
+  }
+  .new-record-label.visible { display: block; }
+
+  #nickname-input {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,215,0,0.3);
+    color: #fff;
+    padding: 10px 18px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 12px;
+    text-align: center;
+    width: 200px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  #nickname-input:focus {
+    border-color: #ffd700;
+  }
+  #nickname-input::placeholder {
+    color: rgba(255,255,255,0.3);
+    font-weight: 400;
+  }
+
+  /* Leaderboard table */
+  .leaderboard-container {
+    width: min(400px, 90vw);
+    margin: 16px 0;
+  }
+
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .lb-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.5;
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .lb-table th:last-child { text-align: right; }
+
+  .lb-table td {
+    padding: 10px 10px;
+    font-size: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .lb-table td:first-child { font-weight: 800; width: 36px; }
+  .lb-table td:last-child { text-align: right; font-weight: 700; }
+
+  .lb-row { transition: background 0.3s; }
+  .lb-row:hover { background: rgba(255,255,255,0.04); }
+
+  .lb-row.highlight {
+    background: rgba(255,215,0,0.1);
+    border-left: 3px solid #ffd700;
+  }
+  .lb-row.highlight td { color: #ffd700; }
+
+  .lb-rank-1 td:first-child { color: #ffd700; }
+  .lb-rank-2 td:first-child { color: #c0c0c0; }
+  .lb-rank-3 td:first-child { color: #cd7f32; }
+
+  .lb-empty {
+    text-align: center;
+    padding: 30px;
+    opacity: 0.4;
+    font-size: 14px;
+  }
+
+  .lb-level { font-size: 12px; opacity: 0.5; margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -213,10 +327,12 @@
     <div class="hud-left hud-box">
       <div id="score-display">0</div>
       <div id="combo-display">Combo x1</div>
+      <div id="fever-display">FEVER!</div>
       <div id="high-score-display">Best: 0</div>
     </div>
     <div class="hud-center hud-box">
       <div id="level-display">Level 1</div>
+      <div id="wind-display"></div>
     </div>
     <div class="hud-right hud-box">
       <div class="lives-row" id="lives-display"></div>
@@ -227,7 +343,7 @@
 
 <div id="start-screen" class="screen-overlay visible">
   <div class="screen-title float-in">Egg Catcher</div>
-  <div class="screen-sub float-in float-in-d1">Catch eggs falling from the henhouse!<br>Avoid the rotten ones.</div>
+  <div class="screen-sub float-in float-in-d1">Catch eggs falling from the henhouse!<br>Avoid the rotten ones. Build combos for fever mode!</div>
   <div class="egg-legend float-in float-in-d2">
     <div class="egg-legend-item"><span class="egg-swatch" style="background:#fff5e1"></span>+1</div>
     <div class="egg-legend-item"><span class="egg-swatch" style="background:#ffd700"></span>+3 Golden</div>
@@ -235,8 +351,11 @@
     <div class="egg-legend-item"><span class="egg-swatch" style="background:#ff6b6b"></span>Rotten!</div>
     <div class="egg-legend-item"><span class="egg-swatch" style="background:linear-gradient(135deg,#ff6bff,#6bffff)"></span>Power-up</div>
   </div>
-  <div class="screen-sub float-in float-in-d3" style="font-size:12px;opacity:0.4">Mouse, touch, or arrow keys</div>
-  <button class="btn float-in float-in-d4" id="start-btn">Play</button>
+  <div class="screen-sub float-in float-in-d3" style="font-size:12px;opacity:0.4">Mouse, touch, or arrow keys &bull; Watch for wind at higher levels!</div>
+  <div class="btn-row float-in float-in-d4">
+    <button class="btn" id="start-btn">Play</button>
+    <button class="btn btn-secondary" id="leaderboard-btn">Leaderboard</button>
+  </div>
 </div>
 
 <div id="game-over-screen" class="screen-overlay hidden">
@@ -248,13 +367,29 @@
     <div>Best Combo<span class="stat-val" id="stat-combo">0</span></div>
     <div>Best<span class="stat-val" id="stat-best">0</span></div>
   </div>
-  <button class="btn" id="restart-btn">Play Again</button>
+  <div id="nickname-section">
+    <div class="qualify-label" id="qualify-label">You made the Top 10!</div>
+    <div class="new-record-label" id="new-record-label">NEW HIGH SCORE!</div>
+    <input type="text" id="nickname-input" placeholder="Enter nickname" maxlength="16" autocomplete="off">
+    <button class="btn" id="save-score-btn" style="padding:12px 36px; font-size:16px;">Save Score</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="restart-btn">Play Again</button>
+    <button class="btn btn-secondary" id="gameover-lb-btn">Leaderboard</button>
+  </div>
 </div>
 
 <div id="pause-screen" class="screen-overlay hidden">
   <div class="screen-title" style="font-size:clamp(28px,7vw,52px)">Paused</div>
   <div class="screen-spacer"></div>
   <button class="btn" id="resume-btn">Resume</button>
+</div>
+
+<div id="leaderboard-screen" class="screen-overlay hidden">
+  <div class="screen-title" style="font-size:clamp(28px,7vw,52px)">Leaderboard</div>
+  <div class="screen-sub">Top egg catchers</div>
+  <div class="leaderboard-container" id="leaderboard-container"></div>
+  <button class="btn btn-secondary" id="lb-back-btn">Back</button>
 </div>
 
 <script>
@@ -274,17 +409,29 @@
   // ---- DOM refs ----
   const scoreDisplay = document.getElementById('score-display');
   const comboDisplay = document.getElementById('combo-display');
+  const feverDisplay = document.getElementById('fever-display');
   const highScoreDisplay = document.getElementById('high-score-display');
   const levelDisplay = document.getElementById('level-display');
+  const windDisplay = document.getElementById('wind-display');
   const livesDisplay = document.getElementById('lives-display');
   const startScreen = document.getElementById('start-screen');
   const gameOverScreen = document.getElementById('game-over-screen');
   const pauseScreen = document.getElementById('pause-screen');
+  const leaderboardScreen = document.getElementById('leaderboard-screen');
   const finalScoreEl = document.getElementById('final-score');
   const startBtn = document.getElementById('start-btn');
   const restartBtn = document.getElementById('restart-btn');
   const resumeBtn = document.getElementById('resume-btn');
   const pauseBtn = document.getElementById('pause-btn');
+  const leaderboardBtn = document.getElementById('leaderboard-btn');
+  const gameoverLbBtn = document.getElementById('gameover-lb-btn');
+  const lbBackBtn = document.getElementById('lb-back-btn');
+  const nicknameSection = document.getElementById('nickname-section');
+  const nicknameInput = document.getElementById('nickname-input');
+  const saveScoreBtn = document.getElementById('save-score-btn');
+  const qualifyLabel = document.getElementById('qualify-label');
+  const newRecordLabel = document.getElementById('new-record-label');
+  const leaderboardContainer = document.getElementById('leaderboard-container');
 
   // ---- Audio Engine (Web Audio API) ----
   let audioCtx = null;
@@ -313,10 +460,73 @@
   function sfxDiamond()  { playTone(1200, 0.15, 'sine', 0.1); playTone(1500, 0.15, 'sine', 0.08); playTone(1800, 0.2, 'sine', 0.06); }
   function sfxRotten()   { playTone(200, 0.25, 'sawtooth', 0.1, 80); }
   function sfxMiss()     { playTone(300, 0.2, 'square', 0.06, 150); }
+  function sfxNearMiss() { playTone(400, 0.1, 'triangle', 0.04); }
   function sfxLevelUp()  { playTone(523, 0.12, 'triangle', 0.1); setTimeout(() => playTone(659, 0.12, 'triangle', 0.1), 100); setTimeout(() => playTone(784, 0.2, 'triangle', 0.1), 200); }
   function sfxPowerup()  { playTone(600, 0.1, 'sine', 0.12); playTone(900, 0.1, 'sine', 0.1); setTimeout(() => playTone(1200, 0.2, 'sine', 0.1), 80); }
+  function sfxFever()    { playTone(1000, 0.1, 'sine', 0.1); playTone(1250, 0.1, 'sine', 0.1); playTone(1500, 0.1, 'sine', 0.08); setTimeout(() => { playTone(2000, 0.2, 'sine', 0.08); }, 120); }
   function sfxGameOver() { playTone(400, 0.3, 'sawtooth', 0.08, 100); setTimeout(() => playTone(200, 0.5, 'sawtooth', 0.06, 60), 300); }
   function sfxCombo()    { playTone(1000 + combo * 80, 0.08, 'sine', 0.06); }
+  function sfxNewRecord(){ playTone(523, 0.15, 'sine', 0.1); setTimeout(() => playTone(659, 0.15, 'sine', 0.1), 150); setTimeout(() => playTone(784, 0.15, 'sine', 0.1), 300); setTimeout(() => playTone(1047, 0.3, 'sine', 0.12), 450); }
+
+  // ---- Leaderboard ----
+  const LB_KEY = 'eggCatcherLeaderboard';
+  const LB_MAX = 10;
+
+  function loadLeaderboard() {
+    try {
+      const data = JSON.parse(localStorage.getItem(LB_KEY));
+      if (Array.isArray(data)) return data.slice(0, LB_MAX);
+    } catch(e) {}
+    return [];
+  }
+
+  function saveLeaderboard(lb) {
+    try { localStorage.setItem(LB_KEY, JSON.stringify(lb.slice(0, LB_MAX))); } catch(e) {}
+  }
+
+  function qualifiesForLeaderboard(s) {
+    const lb = loadLeaderboard();
+    if (s <= 0) return false;
+    if (lb.length < LB_MAX) return true;
+    return s > lb[lb.length - 1].score;
+  }
+
+  function addToLeaderboard(name, s, lvl, maxC) {
+    const lb = loadLeaderboard();
+    const entry = { name: name.trim().substring(0, 16) || 'Anonymous', score: s, level: lvl, combo: maxC, date: Date.now() };
+    lb.push(entry);
+    lb.sort((a, b) => b.score - a.score);
+    const trimmed = lb.slice(0, LB_MAX);
+    saveLeaderboard(trimmed);
+    return trimmed.indexOf(entry);
+  }
+
+  function renderLeaderboard(highlightDate) {
+    const lb = loadLeaderboard();
+    if (lb.length === 0) {
+      leaderboardContainer.innerHTML = '<div class="lb-empty">No scores yet. Be the first!</div>';
+      return;
+    }
+    let html = '<table class="lb-table"><thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead><tbody>';
+    lb.forEach((entry, i) => {
+      const rankClass = i < 3 ? ` lb-rank-${i + 1}` : '';
+      const hlClass = (highlightDate && entry.date === highlightDate) ? ' highlight' : '';
+      const medal = i === 0 ? '\u{1F947}' : i === 1 ? '\u{1F948}' : i === 2 ? '\u{1F949}' : '';
+      html += `<tr class="lb-row${rankClass}${hlClass}">`;
+      html += `<td>${medal || (i + 1)}</td>`;
+      html += `<td>${escHtml(entry.name)}<span class="lb-level">Lv${entry.level}</span></td>`;
+      html += `<td>${entry.score}</td>`;
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    leaderboardContainer.innerHTML = html;
+  }
+
+  function escHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
 
   // ---- High Score ----
   let highScore = 0;
@@ -349,38 +559,60 @@
   let stars = [];
   let clouds = [];
   let gameTime = 0;
+  let lbReturnTo = 'start'; // which screen to return to from leaderboard
+  let lastSavedDate = null;  // highlight recently saved entry
 
   // Power-up state
   let magnetActive = 0;
   let shieldActive = 0;
   let slowActive = 0;
 
+  // Fever mode
+  let feverActive = 0;
+  const FEVER_COMBO_THRESHOLD = 15;
+  const FEVER_DURATION = 6;
+
+  // Wind
+  let windStrength = 0;   // pixels/sec, negative = left, positive = right
+  let windTarget = 0;
+  let windChangeTimer = 0;
+
+  // Grace period (no rotten eggs for first N seconds)
+  const GRACE_PERIOD = 4;
+
   const MAX_LIVES = 5;
 
   // ---- Sizing helpers ----
-  function bw() { return W * 0.17; }
+  function bw() { return W * Math.max(0.10, 0.18 - level * 0.006); }
   function bh() { return H * 0.06; }
   function er() { return Math.max(14, W * 0.024); }
   function basketYPos() { return H - bh() - 24; }
 
   // ---- Level config ----
-  function spawnInterval() { return Math.max(220, 850 - level * 60); }
-  function eggBaseSpeed() { return (1.6 + level * 0.3) * (H / 800); }
+  function spawnInterval() { return Math.max(180, 850 - level * 55); }
+  function eggBaseSpeed() { return (1.6 + level * 0.28) * (H / 800); }
+  function rottenWeight() {
+    if (gameTime < GRACE_PERIOD) return 0;
+    return Math.min(22, 10 + level * 1.5);
+  }
 
-  // ---- Egg types ----
-  const EGG_TYPES = [
-    { weight: 55, color: '#fff5e1', outline: '#e8d5b7', glow: null, points: 1, label: 'normal' },
-    { weight: 20, color: '#ffd700', outline: '#c9a400', glow: 'rgba(255,215,0,0.3)', points: 3, label: 'golden' },
-    { weight: 13, color: '#ff6b6b', outline: '#c0392b', glow: 'rgba(255,50,50,0.25)', points: -1, label: 'rotten' },
-    { weight: 7, color: '#7efff5', outline: '#00b4d8', glow: 'rgba(126,255,245,0.35)', points: 5, label: 'diamond' },
-    { weight: 5, color: '#e76bff', outline: '#9b30ff', glow: 'rgba(231,107,255,0.4)', points: 0, label: 'powerup' },
-  ];
+  // ---- Egg types (dynamic weights) ----
+  function getEggTypes() {
+    return [
+      { weight: 50, color: '#fff5e1', outline: '#e8d5b7', glow: null, points: 1, label: 'normal' },
+      { weight: 18 + level * 0.5, color: '#ffd700', outline: '#c9a400', glow: 'rgba(255,215,0,0.3)', points: 3, label: 'golden' },
+      { weight: rottenWeight(), color: '#ff6b6b', outline: '#c0392b', glow: 'rgba(255,50,50,0.25)', points: -1, label: 'rotten' },
+      { weight: 5 + level * 0.3, color: '#7efff5', outline: '#00b4d8', glow: 'rgba(126,255,245,0.35)', points: 5, label: 'diamond' },
+      { weight: 4, color: '#e76bff', outline: '#9b30ff', glow: 'rgba(231,107,255,0.4)', points: 0, label: 'powerup' },
+    ];
+  }
 
   function pickEggType() {
-    const total = EGG_TYPES.reduce((s, t) => s + t.weight, 0);
+    const types = getEggTypes();
+    const total = types.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
-    for (const t of EGG_TYPES) { r -= t.weight; if (r <= 0) return t; }
-    return EGG_TYPES[0];
+    for (const t of types) { r -= t.weight; if (r <= 0) return t; }
+    return types[0];
   }
 
   // ---- Powerup types ----
@@ -389,8 +621,8 @@
   function applyPowerup() {
     const p = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
     switch (p) {
-      case 'magnet': magnetActive = 5; addFloatingText(W / 2, H / 2, 'MAGNET!', '#e76bff', 32); break;
-      case 'shield': shieldActive = 6; addFloatingText(W / 2, H / 2, 'SHIELD!', '#6bffff', 32); break;
+      case 'magnet': magnetActive = 6; addFloatingText(W / 2, H / 2, 'MAGNET!', '#e76bff', 32); break;
+      case 'shield': shieldActive = 7; addFloatingText(W / 2, H / 2, 'SHIELD!', '#6bffff', 32); break;
       case 'slow':   slowActive = 5; addFloatingText(W / 2, H / 2, 'SLOW-MO!', '#ffff6b', 32); break;
       case 'extralife':
         if (lives < MAX_LIVES) lives++;
@@ -420,7 +652,7 @@
     for (let i = 0; i < 5; i++) {
       clouds.push({
         x: Math.random() * W,
-        y: 30 + Math.random() * H * 0.25,
+        y: 50 + Math.random() * H * 0.22,
         w: 60 + Math.random() * 100,
         speed: 8 + Math.random() * 15,
         opacity: 0.04 + Math.random() * 0.06,
@@ -436,7 +668,7 @@
       hens.push({
         x: (W / (count + 1)) * (i + 1),
         bobOffset: Math.random() * Math.PI * 2,
-        frame: 0,
+        lastDrop: 0,
       });
     }
   }
@@ -460,7 +692,13 @@
 
   window.addEventListener('keydown', e => {
     keysDown[e.key] = true;
-    if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') togglePause();
+    if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+      if (running) togglePause();
+    }
+    // Enter to save nickname
+    if (e.key === 'Enter' && nicknameSection.classList.contains('visible')) {
+      saveNickname();
+    }
   });
   window.addEventListener('keyup', e => { keysDown[e.key] = false; });
 
@@ -519,7 +757,7 @@
   // ---- Screen transitions ----
   function showScreen(el) {
     el.classList.remove('hidden');
-    requestAnimationFrame(() => el.classList.add('visible'));
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
   }
   function hideScreen(el) {
     el.classList.remove('visible');
@@ -542,6 +780,55 @@
   pauseBtn.addEventListener('click', togglePause);
   resumeBtn.addEventListener('click', togglePause);
   resumeBtn.addEventListener('touchend', e => { e.preventDefault(); togglePause(); });
+
+  // ---- Leaderboard navigation ----
+  function showLeaderboard(returnTo) {
+    lbReturnTo = returnTo;
+    renderLeaderboard(lastSavedDate);
+    showScreen(leaderboardScreen);
+  }
+
+  leaderboardBtn.addEventListener('click', () => { hideScreen(startScreen); setTimeout(() => showLeaderboard('start'), 420); });
+  leaderboardBtn.addEventListener('touchend', e => { e.preventDefault(); hideScreen(startScreen); setTimeout(() => showLeaderboard('start'), 420); });
+  gameoverLbBtn.addEventListener('click', () => { hideScreen(gameOverScreen); setTimeout(() => showLeaderboard('gameover'), 420); });
+  gameoverLbBtn.addEventListener('touchend', e => { e.preventDefault(); hideScreen(gameOverScreen); setTimeout(() => showLeaderboard('gameover'), 420); });
+
+  lbBackBtn.addEventListener('click', () => {
+    hideScreen(leaderboardScreen);
+    setTimeout(() => {
+      if (lbReturnTo === 'gameover') showScreen(gameOverScreen);
+      else showScreen(startScreen);
+    }, 420);
+  });
+  lbBackBtn.addEventListener('touchend', e => {
+    e.preventDefault();
+    hideScreen(leaderboardScreen);
+    setTimeout(() => {
+      if (lbReturnTo === 'gameover') showScreen(gameOverScreen);
+      else showScreen(startScreen);
+    }, 420);
+  });
+
+  // ---- Nickname save ----
+  function saveNickname() {
+    const name = nicknameInput.value.trim() || 'Anonymous';
+    const idx = addToLeaderboard(name, score, level, maxCombo);
+    const lb = loadLeaderboard();
+    if (idx >= 0 && idx < lb.length) {
+      lastSavedDate = lb[idx].date;
+    }
+    nicknameSection.classList.remove('visible');
+    // Update high score display from leaderboard
+    const best = loadLeaderboard();
+    if (best.length > 0 && best[0].score > highScore) {
+      highScore = best[0].score;
+      saveHighScore();
+      document.getElementById('stat-best').textContent = highScore;
+    }
+  }
+
+  saveScoreBtn.addEventListener('click', saveNickname);
+  saveScoreBtn.addEventListener('touchend', e => { e.preventDefault(); saveNickname(); });
 
   // ---- UPDATE ----
   function update(dt) {
@@ -566,14 +853,43 @@
     if (magnetActive > 0) magnetActive -= dt;
     if (shieldActive > 0) shieldActive -= dt;
     if (slowActive > 0) slowActive -= dt;
+    if (feverActive > 0) {
+      feverActive -= dt;
+      if (feverActive <= 0) {
+        feverDisplay.classList.remove('active');
+      }
+    }
+
+    // Wind (starts at level 3)
+    if (level >= 3) {
+      windChangeTimer -= dt;
+      if (windChangeTimer <= 0) {
+        windChangeTimer = 3 + Math.random() * 4;
+        const maxWind = Math.min(80, 20 + (level - 3) * 12);
+        windTarget = (Math.random() - 0.5) * 2 * maxWind;
+      }
+      windStrength += (windTarget - windStrength) * dt * 1.5;
+      // Wind display
+      if (Math.abs(windStrength) < 5) {
+        windDisplay.textContent = 'Wind: Calm';
+      } else {
+        const dir = windStrength < 0 ? '\u2190' : '\u2192';
+        const str = Math.abs(windStrength) > 40 ? 'Strong' : 'Light';
+        windDisplay.textContent = `Wind: ${str} ${dir}`;
+      }
+    } else {
+      windStrength = 0;
+      windDisplay.textContent = '';
+    }
 
     // Stars twinkle
     for (const s of stars) s.twinkle += s.speed * dt;
 
     // Clouds drift
     for (const c of clouds) {
-      c.x += c.speed * dt;
+      c.x += (c.speed + windStrength * 0.3) * dt;
       if (c.x > W + c.w) c.x = -c.w;
+      if (c.x < -c.w) c.x = W + c.w;
     }
 
     // Hen bob
@@ -583,24 +899,28 @@
     spawnTimer -= dt * 1000;
     if (spawnTimer <= 0) {
       spawnTimer = spawnInterval();
-      const type = pickEggType();
-      const radius = er();
-      // Pick a random hen to drop from
-      const hen = hens[Math.floor(Math.random() * hens.length)];
-      const spawnX = hen ? hen.x : radius + Math.random() * (W - radius * 2);
-      const slowMult = slowActive > 0 ? 0.5 : 1;
+      // At higher levels, sometimes spawn 2 eggs at once
+      const spawnCount = (level >= 5 && Math.random() < 0.25) ? 2 : 1;
+      for (let sc = 0; sc < spawnCount; sc++) {
+        const type = pickEggType();
+        const radius = er();
+        const hen = hens[Math.floor(Math.random() * hens.length)];
+        const spawnX = hen ? hen.x + (sc * 40 - 20 * (spawnCount - 1)) : radius + Math.random() * (W - radius * 2);
+        const slowMult = slowActive > 0 ? 0.5 : 1;
+        if (hen) hen.lastDrop = gameTime;
 
-      eggs.push({
-        x: spawnX,
-        y: 50,
-        speed: eggBaseSpeed() * (0.85 + Math.random() * 0.3) * slowMult,
-        wobbleOffset: Math.random() * Math.PI * 2,
-        radius,
-        type,
-        rotation: 0,
-        rotSpeed: (Math.random() - 0.5) * 2,
-        trail: [],
-      });
+        eggs.push({
+          x: spawnX,
+          y: 50,
+          speed: eggBaseSpeed() * (0.85 + Math.random() * 0.3) * slowMult,
+          wobbleOffset: Math.random() * Math.PI * 2,
+          radius,
+          type,
+          rotation: 0,
+          rotSpeed: (Math.random() - 0.5) * 2,
+          trail: [],
+        });
+      }
     }
 
     // Move eggs
@@ -613,16 +933,19 @@
       const egg = eggs[i];
       const slowMult = slowActive > 0 ? 0.5 : 1;
       egg.y += egg.speed * dt * 60 * slowMult;
+      egg.x += windStrength * dt * slowMult;
       egg.wobbleOffset += dt * 3;
       egg.rotation += egg.rotSpeed * dt;
+
+      // Keep eggs on screen horizontally
+      egg.x = Math.max(egg.radius, Math.min(W - egg.radius, egg.x));
 
       // Magnet attraction for good eggs
       if (magnetActive > 0 && egg.type.points > 0) {
         const dx = basketCenterX - egg.x;
-        const dy = by - egg.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 250) {
-          const pull = 200 * dt / Math.max(dist, 30);
+        const dist = Math.abs(dx);
+        if (dist < 280) {
+          const pull = 220 * dt / Math.max(dist, 25);
           egg.x += dx * pull;
         }
       }
@@ -647,18 +970,29 @@
         if (egg.type.label === 'powerup') {
           applyPowerup();
           sfxPowerup();
-          spawnParticles(egg.x, egg.y, '#e76bff', 18, { maxSpeed: 5, shape: 'circle' });
+          spawnParticles(egg.x, egg.y, '#e76bff', 18, { maxSpeed: 5 });
           eggs.splice(i, 1);
           continue;
         }
 
         if (pts > 0) {
-          // Good catch
           combo++;
           if (combo > maxCombo) maxCombo = combo;
           totalCaught++;
+
+          // Fever mode trigger
+          if (combo === FEVER_COMBO_THRESHOLD && feverActive <= 0) {
+            feverActive = FEVER_DURATION;
+            sfxFever();
+            feverDisplay.classList.add('active');
+            flashAlpha = 0.15;
+            flashColor = '#ff4400';
+            addFloatingText(W / 2, H * 0.3, 'FEVER MODE!', '#ff4400', 40);
+          }
+
           const comboMult = combo >= 10 ? 3 : combo >= 5 ? 2 : 1;
-          const earned = pts * comboMult;
+          const feverMult = feverActive > 0 ? 2 : 1;
+          const earned = pts * comboMult * feverMult;
           score += earned;
 
           if (egg.type.label === 'golden') sfxGolden();
@@ -667,14 +1001,21 @@
           if (combo > 2) sfxCombo();
 
           scoreDisplay.textContent = score;
-          addFloatingText(egg.x, egg.y - 20, `+${earned}`, egg.type.color, 20 + Math.min(combo, 10));
+
+          let earnLabel = `+${earned}`;
+          if (feverActive > 0 && comboMult > 1) earnLabel += '!!';
+          else if (feverActive > 0) earnLabel += '!';
+          addFloatingText(egg.x, egg.y - 20, earnLabel, egg.type.color, 20 + Math.min(combo, 12));
 
           if (combo >= 3) {
-            comboDisplay.textContent = `Combo x${combo}${comboMult > 1 ? ` (${comboMult}x)` : ''}`;
+            let comboLabel = `Combo x${combo}`;
+            if (comboMult > 1) comboLabel += ` (${comboMult}x)`;
+            if (feverActive > 0) comboLabel += ' FEVER';
+            comboDisplay.textContent = comboLabel;
             comboDisplay.classList.add('active');
           }
 
-          spawnParticles(egg.x, egg.y, egg.type.color, 14, { maxSpeed: 4 });
+          spawnParticles(egg.x, egg.y, egg.type.color, 14 + (feverActive > 0 ? 8 : 0), { maxSpeed: 4 + (feverActive > 0 ? 2 : 0) });
         } else {
           // Rotten egg
           if (shieldActive > 0) {
@@ -682,6 +1023,8 @@
             spawnEggShatter(egg.x, egg.y, '#6bffff');
           } else {
             combo = 0;
+            feverActive = 0;
+            feverDisplay.classList.remove('active');
             comboDisplay.classList.remove('active');
             lives = Math.max(0, lives - 1);
             renderLives();
@@ -714,7 +1057,16 @@
       // Off screen (missed)
       if (egg.y - egg.radius > H) {
         if (egg.type.points > 0) {
+          // Check near-miss
+          const nearDist = Math.abs(egg.x - basketCenterX);
+          if (nearDist < bWidth * 0.8) {
+            addFloatingText(egg.x, H - 40, 'So close!', 'rgba(255,200,100,0.8)', 16);
+            sfxNearMiss();
+          }
+
           combo = 0;
+          feverActive = 0;
+          feverDisplay.classList.remove('active');
           comboDisplay.classList.remove('active');
           lives--;
           renderLives();
@@ -749,20 +1101,27 @@
 
   // ---- DRAWING ----
   function drawBackground() {
-    // Sky gradient (time-of-day feel)
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0b0d2a');
-    grad.addColorStop(0.35, '#141852');
-    grad.addColorStop(0.7, '#1a1a3e');
-    grad.addColorStop(1, '#0f3460');
+    if (feverActive > 0) {
+      const pulse = 0.5 + Math.sin(gameTime * 8) * 0.15;
+      grad.addColorStop(0, `rgba(30,5,5,1)`);
+      grad.addColorStop(0.35, `rgba(40,10,20,1)`);
+      grad.addColorStop(0.7, `rgba(30,8,15,1)`);
+      grad.addColorStop(1, `rgba(50,15,10,1)`);
+    } else {
+      grad.addColorStop(0, '#0b0d2a');
+      grad.addColorStop(0.35, '#141852');
+      grad.addColorStop(0.7, '#1a1a3e');
+      grad.addColorStop(1, '#0f3460');
+    }
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
     // Stars
     for (const s of stars) {
-      const alpha = 0.3 + Math.sin(s.twinkle) * 0.3;
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#fff';
+      const alpha = (feverActive > 0 ? 0.15 : 0.3) + Math.sin(s.twinkle) * 0.3;
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.fillStyle = feverActive > 0 ? '#ffaa88' : '#fff';
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
       ctx.fill();
@@ -772,7 +1131,7 @@
     // Clouds
     for (const c of clouds) {
       ctx.globalAlpha = c.opacity;
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = feverActive > 0 ? '#ffccaa' : '#fff';
       ctx.beginPath();
       ctx.ellipse(c.x, c.y, c.w, c.w * 0.35, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -785,18 +1144,36 @@
     }
     ctx.globalAlpha = 1;
 
+    // Wind streaks
+    if (Math.abs(windStrength) > 15) {
+      ctx.globalAlpha = Math.min(0.12, Math.abs(windStrength) / 400);
+      ctx.strokeStyle = '#aaccff';
+      ctx.lineWidth = 1;
+      const dir = windStrength > 0 ? 1 : -1;
+      for (let i = 0; i < 12; i++) {
+        const sy = 80 + Math.random() * (H - 120);
+        const sx = Math.random() * W;
+        const len = 20 + Math.abs(windStrength) * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + len * dir, sy - 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
     // Ground layers
     const groundY = H - 18;
     const gGrad = ctx.createLinearGradient(0, groundY, 0, H);
-    gGrad.addColorStop(0, '#2d6a4f');
-    gGrad.addColorStop(1, '#1b4332');
+    gGrad.addColorStop(0, feverActive > 0 ? '#4a3020' : '#2d6a4f');
+    gGrad.addColorStop(1, feverActive > 0 ? '#2a1a10' : '#1b4332');
     ctx.fillStyle = gGrad;
     ctx.fillRect(0, groundY, W, 18);
 
     // Grass tufts
-    ctx.fillStyle = '#40916c';
+    ctx.fillStyle = feverActive > 0 ? '#6a4a30' : '#40916c';
     for (let x = 0; x < W; x += 12) {
-      const h = 3 + Math.sin(x * 0.3 + gameTime * 2) * 2;
+      const h = 3 + Math.sin(x * 0.3 + gameTime * 2 + windStrength * 0.02) * 2;
       ctx.fillRect(x, groundY - h + 2, 3, h);
     }
 
@@ -812,13 +1189,17 @@
     const y = 26 + Math.sin(hen.bobOffset) * 3;
     const s = Math.min(20, W * 0.035);
 
+    // Drop animation (hen squats briefly)
+    const timeSinceDrop = gameTime - hen.lastDrop;
+    const squatY = timeSinceDrop < 0.3 ? Math.sin(timeSinceDrop / 0.3 * Math.PI) * 4 : 0;
+
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(x, y + squatY);
 
     // Body
     ctx.fillStyle = '#f5f0e1';
     ctx.beginPath();
-    ctx.ellipse(0, 0, s * 0.9, s * 0.7, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, s * 0.9, s * (0.7 - squatY * 0.01), 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#d4c5a9';
     ctx.lineWidth = 1;
@@ -864,6 +1245,28 @@
     ctx.restore();
   }
 
+  // Draw landing shadow (where egg will land)
+  function drawLandingShadow(egg) {
+    const groundY = H - 18;
+    const progress = Math.min(1, egg.y / groundY);
+    const alpha = progress * 0.2;
+    if (alpha < 0.03) return;
+
+    // Project x position accounting for wind
+    const remainingDist = groundY - egg.y;
+    const timeToLand = remainingDist / (egg.speed * 60);
+    const projectedX = egg.x + windStrength * timeToLand;
+    const clampedX = Math.max(10, Math.min(W - 10, projectedX));
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = egg.type.points < 0 ? 'rgba(255,50,50,0.5)' : 'rgba(0,0,0,0.5)';
+    const shadowW = egg.radius * (0.5 + progress * 0.8);
+    ctx.beginPath();
+    ctx.ellipse(clampedX, groundY, shadowW, 3 + progress * 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
   function drawEgg(egg) {
     const ex = egg.x + Math.sin(egg.wobbleOffset) * 3;
     const ey = egg.y;
@@ -891,18 +1294,18 @@
     // Glow
     if (type.glow) {
       ctx.shadowColor = type.glow;
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = feverActive > 0 ? 24 : 18;
     }
 
     // Egg shape
     ctx.beginPath();
     ctx.ellipse(0, 0, r * 0.72, r, 0, 0, Math.PI * 2);
 
-    // Special gradient for powerup
     if (type.label === 'powerup') {
       const eGrad = ctx.createLinearGradient(-r, -r, r, r);
+      const shift = (gameTime * 2) % 1;
       eGrad.addColorStop(0, '#ff6bff');
-      eGrad.addColorStop(0.5, '#6bffff');
+      eGrad.addColorStop(shift, '#6bffff');
       eGrad.addColorStop(1, '#ff6bff');
       ctx.fillStyle = eGrad;
     } else {
@@ -976,7 +1379,19 @@
       ctx.globalAlpha = 0.12 * Math.min(magnetActive, 1);
       ctx.fillStyle = '#e76bff';
       ctx.beginPath();
-      ctx.ellipse(x + w / 2, y - 60, 130, 130, 0, 0, Math.PI * 2);
+      ctx.ellipse(x + w / 2, y - 60, 140, 140, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Fever glow
+    if (feverActive > 0) {
+      ctx.save();
+      const fp = 0.15 + Math.sin(gameTime * 10) * 0.08;
+      ctx.globalAlpha = fp * Math.min(feverActive, 1);
+      ctx.fillStyle = '#ff4400';
+      ctx.beginPath();
+      ctx.ellipse(x + w / 2, y + h / 2, w / 1.4, h * 1.5, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -1071,8 +1486,8 @@
       ctx.font = `bold ${ft.size}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 5;
       ctx.fillText(ft.text, ft.x, ft.y);
       ctx.shadowBlur = 0;
     }
@@ -1082,9 +1497,10 @@
   function drawPowerupTimers() {
     let y = 80;
     const timers = [];
-    if (magnetActive > 0) timers.push({ label: 'Magnet', t: magnetActive, color: '#e76bff' });
-    if (shieldActive > 0) timers.push({ label: 'Shield', t: shieldActive, color: '#6bffff' });
-    if (slowActive > 0) timers.push({ label: 'Slow-Mo', t: slowActive, color: '#ffff6b' });
+    if (magnetActive > 0) timers.push({ label: 'Magnet', t: magnetActive, max: 6, color: '#e76bff' });
+    if (shieldActive > 0) timers.push({ label: 'Shield', t: shieldActive, max: 7, color: '#6bffff' });
+    if (slowActive > 0) timers.push({ label: 'Slow-Mo', t: slowActive, max: 5, color: '#ffff6b' });
+    if (feverActive > 0) timers.push({ label: 'FEVER', t: feverActive, max: FEVER_DURATION, color: '#ff4400' });
 
     for (const timer of timers) {
       const barW = 100;
@@ -1093,7 +1509,7 @@
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.fillRect(x - 2, y - 2, barW + 4, barH + 4);
       ctx.fillStyle = timer.color;
-      ctx.fillRect(x, y, barW * Math.min(timer.t / 5, 1), barH);
+      ctx.fillRect(x, y, barW * Math.min(timer.t / timer.max, 1), barH);
       ctx.fillStyle = '#fff';
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'right';
@@ -1115,6 +1531,10 @@
 
     drawBackground();
     for (const hen of hens) drawHen(hen);
+
+    // Landing shadows
+    for (const egg of eggs) drawLandingShadow(egg);
+
     drawBasket();
     for (const egg of eggs) drawEgg(egg);
     drawParticles();
@@ -1134,6 +1554,15 @@
       const vGrad = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
       vGrad.addColorStop(0, 'rgba(0,0,0,0)');
       vGrad.addColorStop(1, `rgba(100,100,0,${0.12 * Math.min(slowActive, 1)})`);
+      ctx.fillStyle = vGrad;
+      ctx.fillRect(-10, -10, W + 20, H + 20);
+    }
+
+    // Fever vignette
+    if (feverActive > 0) {
+      const vGrad = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
+      vGrad.addColorStop(0, 'rgba(0,0,0,0)');
+      vGrad.addColorStop(1, `rgba(255,30,0,${0.08 * Math.min(feverActive, 1)})`);
       ctx.fillStyle = vGrad;
       ctx.fillRect(-10, -10, W + 20, H + 20);
     }
@@ -1172,7 +1601,12 @@
     magnetActive = 0;
     shieldActive = 0;
     slowActive = 0;
+    feverActive = 0;
+    windStrength = 0;
+    windTarget = 0;
+    windChangeTimer = 0;
     gameTime = 0;
+    lastSavedDate = null;
 
     resize();
     basketX = W / 2 - bw() / 2;
@@ -1184,13 +1618,16 @@
 
     scoreDisplay.textContent = '0';
     levelDisplay.textContent = 'Level 1';
+    windDisplay.textContent = '';
     comboDisplay.classList.remove('active');
+    feverDisplay.classList.remove('active');
     highScoreDisplay.textContent = `Best: ${highScore}`;
     renderLives();
 
     hideScreen(startScreen);
     hideScreen(gameOverScreen);
     hideScreen(pauseScreen);
+    hideScreen(leaderboardScreen);
 
     running = true;
     paused = false;
@@ -1203,7 +1640,8 @@
     if (animFrameId) cancelAnimationFrame(animFrameId);
     sfxGameOver();
 
-    if (score > highScore) {
+    const isNewRecord = score > highScore;
+    if (isNewRecord) {
       highScore = score;
       saveHighScore();
     }
@@ -1213,6 +1651,20 @@
     document.getElementById('stat-caught').textContent = totalCaught;
     document.getElementById('stat-combo').textContent = maxCombo;
     document.getElementById('stat-best').textContent = highScore;
+
+    // Leaderboard qualification check
+    const qualifies = qualifiesForLeaderboard(score);
+    if (qualifies) {
+      nicknameSection.classList.add('visible');
+      nicknameInput.value = '';
+      qualifyLabel.textContent = isNewRecord ? '' : 'You made the Top 10!';
+      newRecordLabel.classList.toggle('visible', isNewRecord);
+      if (isNewRecord) sfxNewRecord();
+      // Focus the input after screen shows
+      setTimeout(() => nicknameInput.focus(), 700);
+    } else {
+      nicknameSection.classList.remove('visible');
+    }
 
     setTimeout(() => showScreen(gameOverScreen), 600);
   }
