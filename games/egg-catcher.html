@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Egg Catcher</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    overflow: hidden;
+    background: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; }
+  #back-link {
+    position: fixed; top: 14px; left: 14px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(0,0,0,0.4);
+    padding: 6px 14px;
+    border-radius: 20px;
+    backdrop-filter: blur(6px);
+    z-index: 50;
+    transition: color 0.2s;
+  }
+  #back-link:hover { color: #fff; }
+  #ui-overlay {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 10;
+  }
+  #hud {
+    position: absolute; top: 12px; left: 12px; right: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: #fff; font-size: 18px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    padding-left: 110px;
+  }
+  #hud span {
+    background: rgba(0,0,0,0.35);
+    padding: 6px 14px; border-radius: 20px;
+    backdrop-filter: blur(4px);
+  }
+  #start-screen, #game-over-screen {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    background: rgba(10,10,30,0.88);
+    color: #fff; pointer-events: auto; z-index: 20;
+  }
+  #game-over-screen { display: none; }
+  .screen-title {
+    font-size: clamp(32px,8vw,64px);
+    font-weight: 800; margin-bottom: 10px; letter-spacing: 2px;
+  }
+  .screen-sub {
+    font-size: clamp(14px,3vw,22px);
+    opacity: 0.75; margin-bottom: 30px;
+  }
+  .btn {
+    pointer-events: auto;
+    background: linear-gradient(135deg,#f7971e,#ffd200);
+    color: #1a1a2e; border: none;
+    padding: 14px 42px; font-size: 20px;
+    font-weight: 700; border-radius: 40px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,210,0,0.35);
+  }
+  .btn:hover { transform: scale(1.06); }
+  .btn:active { transform: scale(0.97); }
+  #final-score {
+    font-size: clamp(48px,10vw,80px);
+    font-weight: 900; color: #ffd200; margin: 10px 0;
+  }
+  .lives-display { display: flex; gap: 4px; align-items: center; }
+  .lives-display .heart { font-size: 22px; }
+  #level-banner {
+    position: absolute; top: -80px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg,#7c3aed,#06b6d4);
+    color: #fff; padding: 12px 40px;
+    border-radius: 40px; font-size: 22px; font-weight: 800;
+    z-index: 30; pointer-events: none;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.5);
+  }
+  #score-pop {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 28px; font-weight: 900;
+    color: #ffd200; pointer-events: none;
+    z-index: 30; opacity: 0;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+</style>
+</head>
+<body>
+<a class="back-link" id="back-link" href="../index.html">← Back</a>
+<canvas id="game-canvas"></canvas>
+<div id="ui-overlay">
+  <div id="hud">
+    <span id="score-display">Score: 0</span>
+    <span id="level-display">Level 1</span>
+    <div class="lives-display" id="lives-display"></div>
+  </div>
+</div>
+<div id="level-banner">⬆ Level Up!</div>
+<div id="score-pop">+0</div>
+<div id="start-screen">
+  <div class="screen-title" id="start-title">🥚 Egg Catcher</div>
+  <div class="screen-sub">Move the basket to catch falling eggs!</div>
+  <div class="screen-sub" style="margin-top:-18px;font-size:14px;opacity:0.5;">Mouse or touch supported</div>
+  <button class="btn" id="start-btn">Play</button>
+</div>
+<div id="game-over-screen">
+  <div class="screen-title">Game Over</div>
+  <div id="final-score">0</div>
+  <div class="screen-sub">eggs caught</div>
+  <button class="btn" id="restart-btn">Play Again</button>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const scoreDisplay = document.getElementById('score-display');
+  const levelDisplay = document.getElementById('level-display');
+  const livesDisplay = document.getElementById('lives-display');
+  const startScreen = document.getElementById('start-screen');
+  const gameOverScreen = document.getElementById('game-over-screen');
+  const finalScoreEl = document.getElementById('final-score');
+  const startBtn = document.getElementById('start-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const levelBanner = document.getElementById('level-banner');
+  const scorePop = document.getElementById('score-pop');
+
+  let running = false, score = 0, lives = 5, level = 1;
+  let eggs = [], particles = [], spawnTimer = 0;
+  let basketX = 0, targetBasketX = 0, animFrameId = null, lastTime = 0;
+
+  const BASKET_WIDTH_RATIO = 0.18, BASKET_HEIGHT_RATIO = 0.065;
+  const EGG_RADIUS_RATIO = 0.022, MAX_LIVES = 5;
+
+  function bw() { return canvas.width * BASKET_WIDTH_RATIO; }
+  function bh() { return canvas.height * BASKET_HEIGHT_RATIO; }
+  function er() { return Math.max(12, canvas.width * EGG_RADIUS_RATIO); }
+  function basketY() { return canvas.height - bh() - 20; }
+  function spawnInterval() { return Math.max(250, 900 - level * 70); }
+  function eggSpeed() { return (1.5 + level * 0.35) * (canvas.height / 800); }
+
+  const EGG_TYPES = [
+    { weight:60, color:'#fff5e1', outline:'#e8d5b7', points:1, label:'normal' },
+    { weight:22, color:'#ffd700', outline:'#c9a400', points:3, label:'golden' },
+    { weight:12, color:'#ff6b6b', outline:'#c0392b', points:-1, label:'rotten' },
+    { weight:6,  color:'#7efff5', outline:'#00b4d8', points:5, label:'diamond' },
+  ];
+
+  function pickEggType() {
+    const total = EGG_TYPES.reduce((s,t) => s+t.weight, 0);
+    let r = Math.random() * total;
+    for (const t of EGG_TYPES) { r -= t.weight; if (r <= 0) return t; }
+    return EGG_TYPES[0];
+  }
+
+  function handlePointer(x) { targetBasketX = x - bw() / 2; }
+  canvas.addEventListener('mousemove', e => { if (running) handlePointer(e.clientX); });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); if (running && e.touches.length) handlePointer(e.touches[0].clientX); }, { passive:false });
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); if (running && e.touches.length) handlePointer(e.touches[0].clientX); }, { passive:false });
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 3;
+      particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed-2, life:1, decay:0.015+Math.random()*0.025, size:2+Math.random()*4, color });
+    }
+  }
+
+  function renderLives() {
+    let html = '';
+    for (let i = 0; i < MAX_LIVES; i++)
+      html += `<span class="heart" style="opacity:${i<lives?1:0.2}">❤️</span>`;
+    livesDisplay.innerHTML = html;
+  }
+
+  function showScorePop(x, y, pts) {
+    scorePop.textContent = pts > 0 ? `+${pts}` : pts;
+    scorePop.style.color = pts > 0 ? '#ffd200' : '#ff6b6b';
+    scorePop.style.left = x + 'px';
+    scorePop.style.top = y + 'px';
+    gsap.killTweensOf(scorePop);
+    gsap.fromTo(scorePop, { opacity:1, y:0, scale:1.2 }, { opacity:0, y:-50, scale:1, duration:0.8, ease:'power2.out' });
+  }
+
+  function showLevelBanner(lvl) {
+    levelBanner.textContent = `⬆ Level ${lvl}!`;
+    gsap.killTweensOf(levelBanner);
+    gsap.fromTo(levelBanner,
+      { top:'-80px', opacity:1 },
+      { top:'80px', duration:0.5, ease:'back.out(1.7)',
+        onComplete: () => gsap.to(levelBanner, { top:'-80px', delay:1.2, duration:0.4, ease:'power2.in' }) }
+    );
+  }
+
+  function update(dt) {
+    basketX += (targetBasketX - basketX) * Math.min(1, dt * 12);
+    basketX = Math.max(0, Math.min(canvas.width - bw(), basketX));
+    spawnTimer -= dt * 1000;
+    if (spawnTimer <= 0) {
+      spawnTimer = spawnInterval();
+      const type = pickEggType();
+      const radius = er();
+      eggs.push({ x: radius + Math.random()*(canvas.width-radius*2), y:-radius, speed:eggSpeed()*(0.85+Math.random()*0.3), wobbleOffset:Math.random()*Math.PI*2, radius, type, rotation:0, rotSpeed:(Math.random()-0.5)*2 });
+    }
+    const by = basketY(), bWidth = bw(), bHeight = bh();
+    for (let i = eggs.length-1; i >= 0; i--) {
+      const egg = eggs[i];
+      egg.y += egg.speed * dt * 60;
+      egg.wobbleOffset += dt * 3;
+      egg.rotation += egg.rotSpeed * dt;
+      const eggBottom = egg.y + egg.radius;
+      if (eggBottom >= by && eggBottom <= by+bHeight+egg.speed*2 && egg.x >= basketX-egg.radius*0.5 && egg.x <= basketX+bWidth+egg.radius*0.5) {
+        const pts = egg.type.points;
+        score = Math.max(0, score+pts);
+        scoreDisplay.textContent = `Score: ${score}`;
+        showScorePop(egg.x, egg.y, pts);
+        if (pts > 0) { spawnParticles(egg.x, egg.y, egg.type.color, 10); }
+        else { spawnParticles(egg.x, egg.y, '#ff0000', 15); lives = Math.max(0, lives-1); renderLives(); if (lives <= 0) { endGame(); return; } }
+        eggs.splice(i, 1);
+        const newLevel = Math.floor(score/15)+1;
+        if (newLevel > level) { level = newLevel; levelDisplay.textContent = `Level ${level}`; showLevelBanner(level); }
+        continue;
+      }
+      if (egg.y - egg.radius > canvas.height) {
+        if (egg.type.points > 0) { lives--; renderLives(); spawnParticles(egg.x, canvas.height-10, '#ff4444', 8); if (lives <= 0) { endGame(); return; } }
+        eggs.splice(i, 1);
+      }
+    }
+    for (let i = particles.length-1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function drawBackground() {
+    const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+    grad.addColorStop(0,'#16213e'); grad.addColorStop(0.5,'#1a1a2e'); grad.addColorStop(1,'#0f3460');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#2d6a4f'; ctx.fillRect(0,canvas.height-14,canvas.width,14);
+    ctx.fillStyle = '#40916c'; ctx.fillRect(0,canvas.height-14,canvas.width,4);
+  }
+
+  function drawEgg(egg) {
+    ctx.save();
+    ctx.translate(egg.x + Math.sin(egg.wobbleOffset)*3, egg.y);
+    ctx.rotate(egg.rotation);
+    const r = egg.radius, type = egg.type;
+    ctx.beginPath(); ctx.ellipse(0,0,r*0.72,r,0,0,Math.PI*2);
+    ctx.fillStyle = type.color; ctx.fill();
+    ctx.strokeStyle = type.outline; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(-r*0.2,-r*0.35,r*0.18,r*0.28,-0.3,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+    if (type.label !== 'normal') {
+      const glyphs = { golden:'★', rotten:'✕', diamond:'◆' };
+      const colors = { golden:'#b8860b', rotten:'#7a1a1a', diamond:'#006d77' };
+      ctx.fillStyle = colors[type.label];
+      ctx.font = `bold ${Math.round(r*0.7)}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(glyphs[type.label], 0, 1);
+    }
+    ctx.restore();
+  }
+
+  function drawBasket() {
+    const x = basketX, y = basketY(), w = bw(), h = bh(), r = 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(x+w/2,y+h+4,w/2.2,6,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w-6,y+h-r); ctx.quadraticCurveTo(x+w-8,y+h,x+w-8-r,y+h);
+    ctx.lineTo(x+8+r,y+h); ctx.quadraticCurveTo(x+8,y+h,x+6,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+    const bg = ctx.createLinearGradient(x,y,x,y+h);
+    bg.addColorStop(0,'#c9a96e'); bg.addColorStop(0.5,'#a67c52'); bg.addColorStop(1,'#8b5e3c');
+    ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = '#6b3e26'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(107,62,38,0.35)'; ctx.lineWidth = 1.5;
+    for (let i = 1; i < 5; i++) { const ly = y+(h/5)*i; ctx.beginPath(); ctx.moveTo(x+6,ly); ctx.lineTo(x+w-6,ly); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(x-3,y); ctx.lineTo(x+w+3,y);
+    ctx.strokeStyle = '#5a3420'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.stroke();
+  }
+
+  function drawParticles() {
+    for (const p of particles) { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() { drawBackground(); drawBasket(); for (const egg of eggs) drawEgg(egg); drawParticles(); }
+
+  function loop(timestamp) {
+    if (!running) return;
+    const dt = Math.min((timestamp - lastTime)/1000, 0.05);
+    lastTime = timestamp;
+    update(dt); draw();
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  function startGame() {
+    score=0; lives=MAX_LIVES; level=1; eggs=[]; particles=[]; spawnTimer=0;
+    basketX = canvas.width/2 - bw()/2; targetBasketX = basketX;
+    scoreDisplay.textContent = 'Score: 0'; levelDisplay.textContent = 'Level 1';
+    renderLives();
+    gsap.to(startScreen, { opacity:0, duration:0.4, onComplete: () => { startScreen.style.display='none'; } });
+    gameOverScreen.style.display = 'none';
+    running = true; lastTime = performance.now();
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  function endGame() {
+    running = false;
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    finalScoreEl.textContent = score;
+    gameOverScreen.style.display = 'flex';
+    gsap.fromTo(gameOverScreen, { opacity:0, scale:0.85 }, { opacity:1, scale:1, duration:0.5, ease:'back.out(1.4)' });
+  }
+
+  startBtn.addEventListener('click', startGame);
+  startBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
+  restartBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
+
+  // GSAP start screen entrance
+  const startTitle = document.getElementById('start-title');
+  gsap.from(startTitle, { scale:0, duration:0.7, ease:'back.out(1.7)', delay:0.2 });
+  gsap.from('#start-btn', { scale:0, duration:0.5, ease:'back.out(2)', delay:0.6,
+    onComplete: () => gsap.to('#start-btn', { scale:1.05, repeat:-1, yoyo:true, duration:0.7, ease:'sine.inOut' }) });
+
+  renderLives();
+  drawBackground();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sliding Puzzle</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0d0d1a; font-family:'Segoe UI',sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#e2e8f0; user-select:none; touch-action:manipulation; }
+  #back-link { position:fixed; top:14px; left:14px; color:rgba(255,255,255,0.7); text-decoration:none; font-size:14px; font-weight:600; background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:20px; backdrop-filter:blur(6px); z-index:50; }
+  #back-link:hover { color:#fff; }
+  #hud { display:flex; gap:16px; margin-bottom:20px; }
+  #hud span { background:rgba(255,255,255,0.07); padding:7px 18px; border-radius:20px; font-size:15px; font-weight:700; }
+  #puzzle { position:relative; border-radius:16px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); }
+  .tile {
+    position:absolute; display:flex; align-items:center; justify-content:center;
+    font-size:clamp(1.4rem,6vw,2.2rem); font-weight:900;
+    background:linear-gradient(135deg,rgba(124,58,237,0.35),rgba(6,182,212,0.2));
+    border:1px solid rgba(124,58,237,0.4); border-radius:10px;
+    cursor:pointer; transition:border-color 0.2s;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  }
+  .tile:hover { border-color:rgba(124,58,237,0.8); }
+  .tile.blank { background:rgba(0,0,0,0.2); border-color:rgba(255,255,255,0.05); box-shadow:inset 0 2px 8px rgba(0,0,0,0.4); cursor:default; }
+  #shuffle-btn, #new-game-btn { background:linear-gradient(135deg,#7c3aed,#06b6d4); color:#fff; border:none; padding:11px 36px; font-size:1rem; font-weight:700; border-radius:40px; cursor:pointer; margin-top:16px; }
+  #shuffle-btn:hover, #new-game-btn:hover { transform:scale(1.06); }
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(5,5,20,0.92); z-index:40; }
+  .overlay h1 { font-size:clamp(2rem,7vw,3.5rem); font-weight:900; margin-bottom:12px; }
+  .overlay p { opacity:0.7; margin-bottom:30px; font-size:1.05rem; }
+  .btn { background:linear-gradient(135deg,#7c3aed,#06b6d4); color:#fff; border:none; padding:14px 44px; font-size:1.1rem; font-weight:700; border-radius:40px; cursor:pointer; }
+  .btn:hover { transform:scale(1.06); }
+  #win-screen { display:none; }
+  #win-moves { font-size:1.4rem; color:#fbbf24; margin-bottom:8px; font-weight:700; }
+  #win-time { font-size:1rem; opacity:0.7; margin-bottom:24px; }
+  #move-pop { position:fixed; font-size:20px; font-weight:900; color:#a78bfa; pointer-events:none; z-index:60; opacity:0; left:50%; transform:translateX(-50%); }
+</style>
+</head>
+<body>
+<a id="back-link" href="../index.html">← Back</a>
+
+<div class="overlay" id="start-screen">
+  <h1 id="s-title">🔢 Sliding Puzzle</h1>
+  <p>Slide tiles to arrange 1–8 in order</p>
+  <button class="btn" id="start-btn">Play</button>
+</div>
+
+<div class="overlay" id="win-screen">
+  <h1>🎉 Solved!</h1>
+  <div id="win-moves"></div>
+  <div id="win-time"></div>
+  <button class="btn" id="restart-btn">Play Again</button>
+</div>
+
+<div id="hud">
+  <span id="moves-el">🎯 0</span>
+  <span id="time-el">⏱ 0s</span>
+  <span id="best-el">🏆 --</span>
+</div>
+<div id="puzzle"></div>
+<div id="move-pop">Move!</div>
+<button id="shuffle-btn">🔀 Shuffle</button>
+
+<script>
+(() => {
+  const puzzle = document.getElementById('puzzle');
+  const movesEl = document.getElementById('moves-el');
+  const timeEl = document.getElementById('time-el');
+  const bestEl = document.getElementById('best-el');
+  const winScreen = document.getElementById('win-screen');
+  const winMoves = document.getElementById('win-moves');
+  const winTime = document.getElementById('win-time');
+  const startScreen = document.getElementById('start-screen');
+  const movePop = document.getElementById('move-pop');
+
+  const N = 3, TOTAL = N*N;
+  let TILE_SIZE, GAP = 6, PUZZLE_SIZE;
+  let board, tileEls, moves, seconds, timerInt, locked;
+
+  function setupSize() {
+    TILE_SIZE = Math.min(Math.floor((Math.min(window.innerWidth-60, 360)) / N), 100);
+    PUZZLE_SIZE = TILE_SIZE*N + GAP*(N+1);
+    puzzle.style.width = PUZZLE_SIZE+'px';
+    puzzle.style.height = PUZZLE_SIZE+'px';
+  }
+  setupSize();
+
+  function getBest() { return localStorage.getItem('puzzle-best')||null; }
+  function setBest(v) { localStorage.setItem('puzzle-best',v); }
+  function updateBest() { const b=getBest(); bestEl.textContent=b?`🏆 ${b}m`:'🏆 --'; }
+
+  // Solvable shuffle using random valid moves from solved state
+  function shuffleBoard() {
+    let b = [1,2,3,4,5,6,7,8,0]; // 0=blank
+    const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+    for(let i=0;i<200;i++){
+      const blank=b.indexOf(0), br=Math.floor(blank/N), bc=blank%N;
+      const valid=dirs.filter(([dr,dc])=>{const nr=br+dr,nc=bc+dc;return nr>=0&&nr<N&&nc>=0&&nc<N;});
+      const [dr,dc]=valid[Math.floor(Math.random()*valid.length)];
+      const nr=br+dr,nc=bc+dc, ni=nr*N+nc;
+      [b[blank],b[ni]]=[b[ni],b[blank]];
+    }
+    return b;
+  }
+
+  function posOf(i) { return { x: GAP + (i%N)*(TILE_SIZE+GAP), y: GAP + Math.floor(i/N)*(TILE_SIZE+GAP) }; }
+
+  function buildTiles() {
+    puzzle.innerHTML=''; tileEls=[];
+    board.forEach((val,i)=>{
+      const pos=posOf(i);
+      const tile=document.createElement('div');
+      tile.className='tile'+(val===0?' blank':'');
+      tile.dataset.val=val;
+      tile.style.width=TILE_SIZE+'px'; tile.style.height=TILE_SIZE+'px';
+      tile.style.left=pos.x+'px'; tile.style.top=pos.y+'px';
+      if(val!==0) tile.textContent=val;
+      tile.addEventListener('click',()=>onTileClick(val));
+      puzzle.appendChild(tile);
+      tileEls.push(tile);
+    });
+  }
+
+  function getTileEl(val) { return tileEls.find(t=>parseInt(t.dataset.val)===val); }
+
+  function onTileClick(val) {
+    if(val===0||locked) return;
+    const idx=board.indexOf(val), blank=board.indexOf(0);
+    const ir=Math.floor(idx/N), ic=idx%N, br=Math.floor(blank/N), bc=blank%N;
+    if(Math.abs(ir-br)+Math.abs(ic-bc)!==1) return;
+    // swap
+    [board[idx],board[blank]]=[board[blank],board[idx]];
+    const tileEl=getTileEl(val);
+    const newPos=posOf(blank), blankPos=posOf(idx);
+    const blankEl=getTileEl(0);
+    locked=true;
+    gsap.to(tileEl,{left:newPos.x,top:newPos.y,duration:0.15,ease:'power2.out',onComplete:()=>{ locked=false; tileEl.style.left=newPos.x+'px'; tileEl.style.top=newPos.y+'px'; }});
+    gsap.set(blankEl,{left:blankPos.x,top:blankPos.y});
+    moves++; movesEl.textContent=`🎯 ${moves}`;
+    gsap.killTweensOf(movePop);
+    gsap.fromTo(movePop,{opacity:0.8,y:0},{opacity:0,y:-30,duration:0.5,ease:'power2.out'});
+    checkWin();
+  }
+
+  function checkWin() {
+    if(board.every((v,i)=>v===(i===TOTAL-1?0:i+1))) {
+      setTimeout(winGame,200);
+    }
+  }
+
+  function winGame() {
+    clearInterval(timerInt);
+    const b=getBest();
+    if(!b||moves<parseInt(b)) setBest(moves);
+    updateBest();
+    winMoves.textContent=`${moves} moves`;
+    winTime.textContent=`Time: ${seconds}s`;
+    winScreen.style.display='flex';
+    gsap.fromTo(winScreen,{opacity:0,scale:0.85},{opacity:1,scale:1,duration:0.5,ease:'back.out(1.4)'});
+    // celebration
+    const allTiles=[...puzzle.querySelectorAll('.tile:not(.blank)')];
+    gsap.to(allTiles,{y:-12,duration:0.25,stagger:0.05,yoyo:true,repeat:1,ease:'power2.out'});
+  }
+
+  function startGame(doShuffle=true) {
+    moves=0; seconds=0; locked=false;
+    movesEl.textContent='🎯 0'; timeEl.textContent='⏱ 0s';
+    updateBest(); clearInterval(timerInt);
+    winScreen.style.display='none';
+    board = doShuffle ? shuffleBoard() : [1,2,3,4,5,6,7,8,0];
+    buildTiles();
+    // fly-in from random positions
+    tileEls.forEach(t=>{
+      gsap.from(t,{x:(Math.random()-0.5)*200,y:(Math.random()-0.5)*200,opacity:0,duration:0.5,ease:'back.out(1.5)',delay:Math.random()*0.3});
+    });
+    timerInt=setInterval(()=>{ seconds++; timeEl.textContent=`⏱ ${seconds}s`; },1000);
+  }
+
+  document.getElementById('shuffle-btn').addEventListener('click',()=>{ clearInterval(timerInt); startGame(true); });
+  document.getElementById('start-btn').addEventListener('click',()=>{
+    gsap.to(startScreen,{opacity:0,duration:0.4,onComplete:()=>{ startScreen.style.display='none'; startGame(); }});
+  });
+  document.getElementById('restart-btn').addEventListener('click',()=>{ winScreen.style.display='none'; startGame(); });
+
+  gsap.from('#s-title',{scale:0,duration:0.7,ease:'back.out(1.7)',delay:0.2});
+  gsap.from('#start-btn',{scale:0,duration:0.5,ease:'back.out(2)',delay:0.6});
+  updateBest();
+  startGame(false);
+})();
+</script>
+</body>
+</html>

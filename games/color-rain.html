@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Color Rain</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0d0d1a; font-family:'Segoe UI',sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#e2e8f0; user-select:none; overflow:hidden; touch-action:manipulation; }
+  #back-link { position:fixed; top:14px; left:14px; color:rgba(255,255,255,0.7); text-decoration:none; font-size:14px; font-weight:600; background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:20px; backdrop-filter:blur(6px); z-index:50; }
+  #back-link:hover { color:#fff; }
+  #game-area { position:relative; overflow:hidden; border-radius:12px; border:1px solid rgba(255,255,255,0.1); }
+  #hud { display:flex; gap:14px; margin-bottom:10px; align-items:center; }
+  #hud span { background:rgba(255,255,255,0.07); padding:6px 16px; border-radius:20px; font-size:15px; font-weight:700; }
+  #color-btns { display:flex; gap:10px; margin-top:12px; }
+  .color-btn { width:52px; height:52px; border-radius:50%; border:3px solid rgba(255,255,255,0.2); cursor:pointer; font-size:22px; display:flex; align-items:center; justify-content:center; transition:transform 0.15s, border-color 0.15s; }
+  .color-btn.active { border-color:#fff; transform:scale(1.2); }
+  .color-btn:hover { transform:scale(1.1); }
+  #catcher { position:absolute; bottom:10px; width:70px; height:24px; border-radius:12px; left:50%; transform:translateX(-50%); display:flex; align-items:center; justify-content:center; font-size:18px; transition:background 0.2s; }
+  .drop { position:absolute; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; pointer-events:none; }
+  .particle { position:absolute; width:8px; height:8px; border-radius:50%; pointer-events:none; }
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(5,5,20,0.92); z-index:40; }
+  .overlay h1 { font-size:clamp(2rem,7vw,3.5rem); font-weight:900; margin-bottom:12px; }
+  .overlay p { opacity:0.7; margin-bottom:10px; font-size:1rem; }
+  .btn { background:linear-gradient(135deg,#ef4444,#fbbf24,#4ade80,#60a5fa); color:#0d0d1a; border:none; padding:14px 44px; font-size:1.1rem; font-weight:700; border-radius:40px; cursor:pointer; margin-top:16px; }
+  .btn:hover { transform:scale(1.06); }
+  #timer-bar-wrap { width:min(360px,88vw); height:8px; background:rgba(255,255,255,0.1); border-radius:8px; margin-bottom:14px; overflow:hidden; }
+  #timer-bar { height:100%; background:linear-gradient(90deg,#ef4444,#fbbf24,#4ade80,#60a5fa); transform-origin:left; }
+  #lives-el { font-size:18px; }
+</style>
+</head>
+<body>
+<a id="back-link" href="../index.html">← Back</a>
+
+<div class="overlay" id="start-screen">
+  <h1 id="s-title">🌈 Color Rain</h1>
+  <p>Match your catcher color to the falling drops!</p>
+  <p style="font-size:.85rem;opacity:.5">Press 1-4 or tap color buttons</p>
+  <button class="btn" id="start-btn">Play</button>
+</div>
+
+<div class="overlay" id="go-screen" style="display:none">
+  <h1>Time's Up!</h1>
+  <div id="go-score" style="font-size:clamp(3rem,10vw,5rem);font-weight:900;color:#fbbf24;margin:8px 0">0</div>
+  <p>points</p>
+  <button class="btn" id="restart-btn">Play Again</button>
+</div>
+
+<div id="hud">
+  <span id="score-el">⭐ 0</span>
+  <span id="lives-el">❤️❤️❤️❤️❤️</span>
+  <span id="time-el">⏱ 60s</span>
+</div>
+<div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+<div id="game-area">
+  <div id="catcher">🟡</div>
+</div>
+<div id="color-btns">
+  <div class="color-btn" data-color="0" style="background:#ef4444">🔴</div>
+  <div class="color-btn" data-color="1" style="background:#3b82f6">🔵</div>
+  <div class="color-btn" data-color="2" style="background:#22c55e">🟢</div>
+  <div class="color-btn" data-color="3" style="background:#eab308">🟡</div>
+</div>
+
+<script>
+(() => {
+  const COLORS = [
+    { name:'red',   bg:'#ef4444', emoji:'🔴', dark:'#991b1b' },
+    { name:'blue',  bg:'#3b82f6', emoji:'🔵', dark:'#1d4ed8' },
+    { name:'green', bg:'#22c55e', emoji:'🟢', dark:'#15803d' },
+    { name:'yellow',bg:'#eab308', emoji:'🟡', dark:'#854d0e' },
+  ];
+
+  const gameArea = document.getElementById('game-area');
+  const catcher = document.getElementById('catcher');
+  const scoreEl = document.getElementById('score-el');
+  const livesEl = document.getElementById('lives-el');
+  const timeEl = document.getElementById('time-el');
+  const timerBar = document.getElementById('timer-bar');
+  const goScreen = document.getElementById('go-screen');
+  const goScore = document.getElementById('go-score');
+  const startScreen = document.getElementById('start-screen');
+  const colorBtns = document.querySelectorAll('.color-btn');
+
+  let W, H;
+  function resize() {
+    W = Math.min(window.innerWidth-24, 400);
+    H = Math.min(window.innerHeight-220, 480);
+    gameArea.style.width = W+'px'; gameArea.style.height = H+'px';
+  }
+  resize();
+
+  const GAME_TIME = 60;
+  let score, lives, timeLeft, currentColor, drops, running, spawnInter, countInter;
+
+  function setColor(i) {
+    currentColor = i;
+    const c = COLORS[i];
+    catcher.style.background = c.bg;
+    catcher.textContent = c.emoji;
+    colorBtns.forEach((b,j) => b.classList.toggle('active', j===i));
+  }
+
+  function spawnDrop() {
+    if (!running) return;
+    const ci = Math.floor(Math.random()*4);
+    const c = COLORS[ci];
+    const drop = document.createElement('div');
+    drop.className = 'drop';
+    drop.style.background = c.bg;
+    drop.style.left = (10+Math.random()*(W-56))+'px';
+    drop.style.top = '-40px';
+    drop.dataset.colorIdx = ci;
+    gameArea.appendChild(drop);
+
+    gsap.to(drop, {
+      y: H+50, duration: 1.8 + Math.random()*1.2, ease:'none',
+      onUpdate: () => {
+        if (!running) return;
+        const rect = drop.getBoundingClientRect();
+        const carect = catcher.getBoundingClientRect();
+        if (rect.bottom > carect.top && rect.top < carect.bottom && rect.right > carect.left && rect.left < carect.right) {
+          const dropColor = parseInt(drop.dataset.colorIdx);
+          gsap.killTweensOf(drop); drop.remove();
+          if (dropColor === currentColor) {
+            score += 10; scoreEl.textContent = `⭐ ${score}`;
+            burst(rect.left + rect.width/2, rect.top + rect.height/2, c.bg);
+          } else {
+            lives = Math.max(0, lives-1);
+            livesEl.textContent = '❤️'.repeat(lives)+'🖤'.repeat(Math.max(0,5-lives));
+            gsap.fromTo(gameArea,{x:0},{x:6,repeat:3,yoyo:true,duration:0.07,ease:'none'});
+            if (lives<=0) endGame();
+          }
+        }
+      },
+      onComplete: () => { try{drop.remove();}catch(e){} }
+    });
+    drops.push(drop);
+  }
+
+  function burst(x, y, color) {
+    for (let i=0;i<10;i++){
+      const p=document.createElement('div'); p.className='particle';
+      p.style.background=color; p.style.left=x+'px'; p.style.top=y+'px';
+      p.style.position='fixed';
+      document.body.appendChild(p);
+      const angle=Math.random()*Math.PI*2, dist=30+Math.random()*50;
+      gsap.to(p,{x:Math.cos(angle)*dist,y:Math.sin(angle)*dist,opacity:0,duration:0.6,ease:'power2.out',onComplete:()=>p.remove()});
+    }
+  }
+
+  function startGame() {
+    score=0; lives=5; timeLeft=GAME_TIME; running=true; drops=[];
+    scoreEl.textContent='⭐ 0'; timeEl.textContent=`⏱ ${GAME_TIME}s`;
+    livesEl.textContent='❤️❤️❤️❤️❤️';
+    setColor(3);
+    goScreen.style.display='none';
+    gsap.to(startScreen,{opacity:0,duration:0.4,onComplete:()=>startScreen.style.display='none'});
+    clearInterval(spawnInter); clearInterval(countInter);
+    gsap.fromTo(timerBar,{scaleX:1},{scaleX:0,duration:GAME_TIME,ease:'none'});
+    spawnInter = setInterval(spawnDrop, 700);
+    countInter = setInterval(()=>{
+      timeLeft--; timeEl.textContent=`⏱ ${timeLeft}s`;
+      if(timeLeft<=0) endGame();
+    },1000);
+  }
+
+  function endGame() {
+    running=false; clearInterval(spawnInter); clearInterval(countInter);
+    drops.forEach(d=>{ gsap.killTweensOf(d); try{d.remove();}catch(e){} }); drops=[];
+    goScore.textContent=score;
+    goScreen.style.display='flex';
+    gsap.fromTo(goScreen,{opacity:0,scale:0.85},{opacity:1,scale:1,duration:0.5,ease:'back.out(1.4)'});
+  }
+
+  // Key controls
+  document.addEventListener('keydown', e => {
+    const map={'1':0,'2':1,'3':2,'4':3};
+    if(map[e.key]!==undefined) setColor(map[e.key]);
+  });
+
+  colorBtns.forEach((btn,i) => btn.addEventListener('click',()=>setColor(i)));
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('restart-btn').addEventListener('click', startGame);
+
+  gsap.from('#s-title',{scale:0,duration:0.7,ease:'back.out(1.7)',delay:0.2});
+  gsap.from('#start-btn',{scale:0,duration:0.5,ease:'back.out(2)',delay:0.6});
+  setColor(3);
+})();
+</script>
+</body>
+</html>
