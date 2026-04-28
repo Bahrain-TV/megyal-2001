@@ -2,539 +2,268 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Egg Catcher</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Hub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d0d1a;
+    --card-bg: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.10);
+    --accent1: #7c3aed;
+    --accent2: #06b6d4;
+    --text: #e2e8f0;
+    --subtext: #94a3b8;
+  }
 
   body {
-    overflow: hidden;
-    background: #1a1a2e;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    touch-action: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
+    background: var(--bg);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 
-  canvas {
-    display: block;
-  }
-
-  #ui-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+  /* Animated background blobs */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
     pointer-events: none;
-    z-index: 10;
+    z-index: 0;
+  }
+  body::before {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #7c3aed, transparent);
+    top: -150px; left: -150px;
+  }
+  body::after {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, #06b6d4, transparent);
+    bottom: -100px; right: -100px;
   }
 
-  #hud {
-    position: absolute;
-    top: 12px; left: 12px; right: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #fff;
-    font-size: 18px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    position: relative;
+    z-index: 1;
   }
 
-  #hud span {
-    background: rgba(0,0,0,0.35);
-    padding: 6px 14px;
+  header h1 {
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #a78bfa, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+  }
+
+  header p {
+    color: var(--subtext);
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 20px;
-    backdrop-filter: blur(4px);
-  }
-
-  #start-screen, #game-over-screen {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    padding: 32px 24px 28px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    background: rgba(10, 10, 30, 0.88);
-    color: #fff;
-    pointer-events: auto;
-    z-index: 20;
-  }
-
-  #game-over-screen { display: none; }
-
-  .screen-title {
-    font-size: clamp(32px, 8vw, 64px);
-    font-weight: 800;
-    margin-bottom: 10px;
-    letter-spacing: 2px;
-  }
-
-  .screen-sub {
-    font-size: clamp(14px, 3vw, 22px);
-    opacity: 0.75;
-    margin-bottom: 30px;
-  }
-
-  .btn {
-    pointer-events: auto;
-    background: linear-gradient(135deg, #f7971e, #ffd200);
-    color: #1a1a2e;
-    border: none;
-    padding: 14px 42px;
-    font-size: 20px;
-    font-weight: 700;
-    border-radius: 40px;
+    text-align: center;
+    position: relative;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 4px 20px rgba(255, 210, 0, 0.35);
+    transition: border-color 0.3s;
+    opacity: 0;
+    transform: translateY(30px);
+    will-change: transform, opacity;
   }
 
-  .btn:hover { transform: scale(1.06); box-shadow: 0 6px 28px rgba(255, 210, 0, 0.5); }
-  .btn:active { transform: scale(0.97); }
-
-  #final-score {
-    font-size: clamp(48px, 10vw, 80px);
-    font-weight: 900;
-    color: #ffd200;
-    margin: 10px 0;
+  .card:hover {
+    border-color: rgba(124, 58, 237, 0.5);
   }
 
-  .lives-display {
-    display: flex;
-    gap: 4px;
-    align-items: center;
+  .card-icon {
+    font-size: 3.5rem;
+    margin-bottom: 16px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 12px rgba(124,58,237,0.3));
   }
 
-  .lives-display .heart {
-    font-size: 22px;
-    transition: opacity 0.3s;
+  .card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .card-desc {
+    font-size: 0.88rem;
+    color: var(--subtext);
+    line-height: 1.5;
+    margin-bottom: 24px;
+    flex-grow: 1;
+  }
+
+  .play-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    color: #fff;
+    text-decoration: none;
+    padding: 11px 36px;
+    border-radius: 40px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.35);
+    transition: box-shadow 0.2s, transform 0.15s;
+    pointer-events: auto;
+  }
+
+  .play-btn:hover {
+    box-shadow: 0 6px 28px rgba(124,58,237,0.55);
+    transform: translateY(-1px);
+  }
+
+  footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--subtext);
+    font-size: 0.82rem;
+    position: relative;
+    z-index: 1;
   }
 </style>
 </head>
 <body>
 
-<canvas id="game-canvas"></canvas>
+<header>
+  <h1>🎮 Game Hub</h1>
+  <p>Pick a game and start playing — no downloads required</p>
+</header>
 
-<div id="ui-overlay">
-  <div id="hud">
-    <span id="score-display">Score: 0</span>
-    <span id="level-display">Level 1</span>
-    <div class="lives-display" id="lives-display"></div>
+<div class="grid" id="grid">
+
+  <div class="card" id="card-0">
+    <div class="card-icon">🥚</div>
+    <div class="card-title">Catch the Eggs</div>
+    <div class="card-desc">Move the basket left and right to catch falling eggs. Avoid rotten ones!</div>
+    <a class="play-btn" href="games/egg-catcher.html">Play</a>
   </div>
+
+  <div class="card" id="card-1">
+    <div class="card-icon">🎣</div>
+    <div class="card-title">Fisherman</div>
+    <div class="card-desc">Cast your line and catch fish before the timer runs out. Watch out for sharks!</div>
+    <a class="play-btn" href="games/fisherman.html">Play</a>
+  </div>
+
+  <div class="card" id="card-2">
+    <div class="card-icon">❌</div>
+    <div class="card-title">Tic-Tac-Toe</div>
+    <div class="card-desc">Classic X vs O strategy game. Beat the AI to claim victory!</div>
+    <a class="play-btn" href="games/tic-tac-toe.html">Play</a>
+  </div>
+
+  <div class="card" id="card-3">
+    <div class="card-icon">💣</div>
+    <div class="card-title">Minesweeper</div>
+    <div class="card-desc">Clear the minefield without triggering any explosions. Flag to survive!</div>
+    <a class="play-btn" href="games/minesweeper.html">Play</a>
+  </div>
+
+  <div class="card" id="card-4">
+    <div class="card-icon">🔨</div>
+    <div class="card-title">Whack-a-Mole</div>
+    <div class="card-desc">Smash moles as they pop out of holes. How fast are your reflexes?</div>
+    <a class="play-btn" href="games/whack-a-mole.html">Play</a>
+  </div>
+
+  <div class="card" id="card-5">
+    <div class="card-icon">🃏</div>
+    <div class="card-title">Memory Match</div>
+    <div class="card-desc">Flip cards and find matching pairs. Test your memory!</div>
+    <a class="play-btn" href="games/memory-match.html">Play</a>
+  </div>
+
+  <div class="card" id="card-6">
+    <div class="card-icon">🐍</div>
+    <div class="card-title">Snake</div>
+    <div class="card-desc">Guide the snake to eat food and grow. Don't hit the walls or yourself!</div>
+    <a class="play-btn" href="games/snake.html">Play</a>
+  </div>
+
+  <div class="card" id="card-7">
+    <div class="card-icon">🧱</div>
+    <div class="card-title">Breakout</div>
+    <div class="card-desc">Break all bricks with the bouncing ball. Collect power-ups for an edge!</div>
+    <a class="play-btn" href="games/breakout.html">Play</a>
+  </div>
+
+  <div class="card" id="card-8">
+    <div class="card-icon">🌈</div>
+    <div class="card-title">Color Rain</div>
+    <div class="card-desc">Match your catcher color to the falling blocks. 60 seconds of color chaos!</div>
+    <a class="play-btn" href="games/color-rain.html">Play</a>
+  </div>
+
+  <div class="card" id="card-9">
+    <div class="card-icon">🔢</div>
+    <div class="card-title">Sliding Puzzle</div>
+    <div class="card-desc">Slide tiles into the correct order. Can you solve it in the fewest moves?</div>
+    <a class="play-btn" href="games/sliding-puzzle.html">Play</a>
+  </div>
+
 </div>
 
-<div id="start-screen">
-  <div class="screen-title">Egg Catcher</div>
-  <div class="screen-sub">Move the basket to catch falling eggs!</div>
-  <div class="screen-sub" style="margin-top:-18px; font-size:14px; opacity:0.5;">Mouse or touch supported</div>
-  <button class="btn" id="start-btn">Play</button>
-</div>
-
-<div id="game-over-screen">
-  <div class="screen-title">Game Over</div>
-  <div id="final-score">0</div>
-  <div class="screen-sub">eggs caught</div>
-  <button class="btn" id="restart-btn">Play Again</button>
-</div>
+<footer>Built with ❤️ — 10 Games, 0 Downloads</footer>
 
 <script>
-(() => {
-  // ---- Canvas Setup ----
-  const canvas = document.getElementById('game-canvas');
-  const ctx = canvas.getContext('2d');
+  const cards = gsap.utils.toArray('.card');
 
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resize);
-  resize();
+  // Stagger entrance animation
+  gsap.to(cards, {
+    opacity: 1,
+    y: 0,
+    duration: 0.6,
+    ease: 'power3.out',
+    stagger: 0.08,
+    delay: 0.2,
+  });
 
-  // ---- DOM refs ----
-  const scoreDisplay = document.getElementById('score-display');
-  const levelDisplay = document.getElementById('level-display');
-  const livesDisplay = document.getElementById('lives-display');
-  const startScreen = document.getElementById('start-screen');
-  const gameOverScreen = document.getElementById('game-over-screen');
-  const finalScoreEl = document.getElementById('final-score');
-  const startBtn = document.getElementById('start-btn');
-  const restartBtn = document.getElementById('restart-btn');
-
-  // ---- Game State ----
-  let running = false;
-  let score = 0;
-  let lives = 5;
-  let level = 1;
-  let eggs = [];
-  let particles = [];
-  let spawnTimer = 0;
-  let basketX = 0;
-  let targetBasketX = 0;
-  let animFrameId = null;
-  let lastTime = 0;
-
-  // ---- Constants ----
-  const BASKET_WIDTH_RATIO = 0.18;   // fraction of canvas width
-  const BASKET_HEIGHT_RATIO = 0.065;
-  const EGG_RADIUS_RATIO = 0.022;
-  const MAX_LIVES = 5;
-
-  // ---- Derived helpers ----
-  function bw() { return canvas.width * BASKET_WIDTH_RATIO; }
-  function bh() { return canvas.height * BASKET_HEIGHT_RATIO; }
-  function er() { return Math.max(12, canvas.width * EGG_RADIUS_RATIO); }
-  function basketY() { return canvas.height - bh() - 20; }
-
-  // ---- Spawn config per level ----
-  function spawnInterval() { return Math.max(250, 900 - level * 70); }
-  function eggSpeed() { return (1.5 + level * 0.35) * (canvas.height / 800); }
-
-  // ---- Egg types ----
-  const EGG_TYPES = [
-    { weight: 60, color: '#fff5e1', outline: '#e8d5b7', points: 1, label: 'normal' },
-    { weight: 22, color: '#ffd700', outline: '#c9a400', points: 3, label: 'golden' },
-    { weight: 12, color: '#ff6b6b', outline: '#c0392b', points: -1, label: 'rotten' },
-    { weight: 6, color: '#7efff5', outline: '#00b4d8', points: 5, label: 'diamond' },
-  ];
-
-  function pickEggType() {
-    const total = EGG_TYPES.reduce((s, t) => s + t.weight, 0);
-    let r = Math.random() * total;
-    for (const t of EGG_TYPES) {
-      r -= t.weight;
-      if (r <= 0) return t;
-    }
-    return EGG_TYPES[0];
-  }
-
-  // ---- Input ----
-  function handlePointer(x) {
-    targetBasketX = x - bw() / 2;
-  }
-
-  canvas.addEventListener('mousemove', e => { if (running) handlePointer(e.clientX); });
-  canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (running && e.touches.length) handlePointer(e.touches[0].clientX);
-  }, { passive: false });
-  canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (running && e.touches.length) handlePointer(e.touches[0].clientX);
-  }, { passive: false });
-
-  // ---- Particles ----
-  function spawnParticles(x, y, color, count) {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 3;
-      particles.push({
-        x, y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2,
-        life: 1,
-        decay: 0.015 + Math.random() * 0.025,
-        size: 2 + Math.random() * 4,
-        color,
-      });
-    }
-  }
-
-  // ---- Lives UI ----
-  function renderLives() {
-    let html = '';
-    for (let i = 0; i < MAX_LIVES; i++) {
-      html += `<span class="heart" style="opacity:${i < lives ? 1 : 0.2}">&#10084;&#65039;</span>`;
-    }
-    livesDisplay.innerHTML = html;
-  }
-
-  // ---- Game Loop ----
-  function update(dt) {
-    // Smooth basket movement
-    basketX += (targetBasketX - basketX) * Math.min(1, dt * 12);
-    // Clamp
-    basketX = Math.max(0, Math.min(canvas.width - bw(), basketX));
-
-    // Spawn eggs
-    spawnTimer -= dt * 1000;
-    if (spawnTimer <= 0) {
-      spawnTimer = spawnInterval();
-      const type = pickEggType();
-      const radius = er();
-      eggs.push({
-        x: radius + Math.random() * (canvas.width - radius * 2),
-        y: -radius,
-        speed: eggSpeed() * (0.85 + Math.random() * 0.3),
-        wobbleOffset: Math.random() * Math.PI * 2,
-        radius,
-        type,
-        rotation: 0,
-        rotSpeed: (Math.random() - 0.5) * 2,
-      });
-    }
-
-    // Move eggs
-    const by = basketY();
-    const bWidth = bw();
-    const bHeight = bh();
-
-    for (let i = eggs.length - 1; i >= 0; i--) {
-      const egg = eggs[i];
-      egg.y += egg.speed * dt * 60;
-      egg.wobbleOffset += dt * 3;
-      egg.rotation += egg.rotSpeed * dt;
-
-      // Collision with basket
-      const eggBottom = egg.y + egg.radius;
-      if (
-        eggBottom >= by &&
-        eggBottom <= by + bHeight + egg.speed * 2 &&
-        egg.x >= basketX - egg.radius * 0.5 &&
-        egg.x <= basketX + bWidth + egg.radius * 0.5
-      ) {
-        // Caught!
-        const pts = egg.type.points;
-        score = Math.max(0, score + pts);
-        scoreDisplay.textContent = `Score: ${score}`;
-
-        if (pts > 0) {
-          spawnParticles(egg.x, egg.y, egg.type.color, 10);
-        } else {
-          spawnParticles(egg.x, egg.y, '#ff0000', 15);
-          lives = Math.max(0, lives - 1);
-          renderLives();
-          if (lives <= 0) { endGame(); return; }
-        }
-
-        eggs.splice(i, 1);
-
-        // Level up
-        const newLevel = Math.floor(score / 15) + 1;
-        if (newLevel > level) {
-          level = newLevel;
-          levelDisplay.textContent = `Level ${level}`;
-        }
-        continue;
-      }
-
-      // Off screen (missed)
-      if (egg.y - egg.radius > canvas.height) {
-        if (egg.type.points > 0) {
-          // missed a good egg
-          lives--;
-          renderLives();
-          spawnParticles(egg.x, canvas.height - 10, '#ff4444', 8);
-          if (lives <= 0) { endGame(); return; }
-        }
-        eggs.splice(i, 1);
-      }
-    }
-
-    // Update particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.08; // gravity
-      p.life -= p.decay;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-  }
-
-  // ---- Drawing ----
-  function drawBackground() {
-    // Sky gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, '#16213e');
-    grad.addColorStop(0.5, '#1a1a2e');
-    grad.addColorStop(1, '#0f3460');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Simple ground
-    ctx.fillStyle = '#2d6a4f';
-    ctx.fillRect(0, canvas.height - 14, canvas.width, 14);
-    ctx.fillStyle = '#40916c';
-    ctx.fillRect(0, canvas.height - 14, canvas.width, 4);
-  }
-
-  function drawEgg(egg) {
-    ctx.save();
-    ctx.translate(egg.x + Math.sin(egg.wobbleOffset) * 3, egg.y);
-    ctx.rotate(egg.rotation);
-
-    const r = egg.radius;
-    const type = egg.type;
-
-    // Egg shape (oval)
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.72, r, 0, 0, Math.PI * 2);
-    ctx.fillStyle = type.color;
-    ctx.fill();
-    ctx.strokeStyle = type.outline;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Shine highlight
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.2, -r * 0.35, r * 0.18, r * 0.28, -0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fill();
-
-    // Label for special eggs
-    if (type.label === 'golden') {
-      ctx.fillStyle = '#b8860b';
-      ctx.font = `bold ${Math.round(r * 0.7)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('★', 0, 1);
-    } else if (type.label === 'rotten') {
-      ctx.fillStyle = '#7a1a1a';
-      ctx.font = `bold ${Math.round(r * 0.7)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('✕', 0, 1);
-    } else if (type.label === 'diamond') {
-      ctx.fillStyle = '#006d77';
-      ctx.font = `bold ${Math.round(r * 0.7)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('◆', 0, 1);
-    }
-
-    ctx.restore();
-  }
-
-  function drawBasket() {
-    const x = basketX;
-    const y = basketY();
-    const w = bw();
-    const h = bh();
-    const r = 12;
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    ctx.beginPath();
-    ctx.ellipse(x + w / 2, y + h + 4, w / 2.2, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Basket body
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w - 6, y + h - r);
-    ctx.quadraticCurveTo(x + w - 8, y + h, x + w - 8 - r, y + h);
-    ctx.lineTo(x + 8 + r, y + h);
-    ctx.quadraticCurveTo(x + 8, y + h, x + 6, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-
-    const basketGrad = ctx.createLinearGradient(x, y, x, y + h);
-    basketGrad.addColorStop(0, '#c9a96e');
-    basketGrad.addColorStop(0.5, '#a67c52');
-    basketGrad.addColorStop(1, '#8b5e3c');
-    ctx.fillStyle = basketGrad;
-    ctx.fill();
-    ctx.strokeStyle = '#6b3e26';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Weave lines
-    ctx.strokeStyle = 'rgba(107, 62, 38, 0.35)';
-    ctx.lineWidth = 1.5;
-    const stripes = 5;
-    for (let i = 1; i < stripes; i++) {
-      const ly = y + (h / stripes) * i;
-      ctx.beginPath();
-      ctx.moveTo(x + 6, ly);
-      ctx.lineTo(x + w - 6, ly);
-      ctx.stroke();
-    }
-
-    // Rim
-    ctx.beginPath();
-    ctx.moveTo(x - 3, y);
-    ctx.lineTo(x + w + 3, y);
-    ctx.strokeStyle = '#5a3420';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  }
-
-  function drawParticles() {
-    for (const p of particles) {
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function draw() {
-    drawBackground();
-    drawBasket();
-    for (const egg of eggs) drawEgg(egg);
-    drawParticles();
-  }
-
-  // ---- Main Loop ----
-  function loop(timestamp) {
-    if (!running) return;
-    const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
-    lastTime = timestamp;
-
-    update(dt);
-    draw();
-
-    animFrameId = requestAnimationFrame(loop);
-  }
-
-  // ---- Game Lifecycle ----
-  function startGame() {
-    score = 0;
-    lives = MAX_LIVES;
-    level = 1;
-    eggs = [];
-    particles = [];
-    spawnTimer = 0;
-    basketX = canvas.width / 2 - bw() / 2;
-    targetBasketX = basketX;
-
-    scoreDisplay.textContent = 'Score: 0';
-    levelDisplay.textContent = 'Level 1';
-    renderLives();
-
-    startScreen.style.display = 'none';
-    gameOverScreen.style.display = 'none';
-
-    running = true;
-    lastTime = performance.now();
-    animFrameId = requestAnimationFrame(loop);
-  }
-
-  function endGame() {
-    running = false;
-    if (animFrameId) cancelAnimationFrame(animFrameId);
-
-    finalScoreEl.textContent = score;
-    gameOverScreen.style.display = 'flex';
-  }
-
-  startBtn.addEventListener('click', startGame);
-  startBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
-  restartBtn.addEventListener('click', startGame);
-  restartBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
-
-  // Initial draw
-  renderLives();
-  drawBackground();
-})();
+  // Hover: scale up
+  cards.forEach(card => {
+    const link = card.querySelector('.play-btn');
+    card.addEventListener('mouseenter', () => {
+      gsap.to(card, { scale: 1.04, duration: 0.25, ease: 'power2.out' });
+    });
+    card.addEventListener('mouseleave', () => {
+      gsap.to(card, { scale: 1, duration: 0.25, ease: 'power2.inOut' });
+    });
+    // Make the whole card clickable by expanding the anchor to cover it
+    link.style.cssText += ';position:absolute;inset:0;padding:0;background:transparent;border-radius:inherit;box-shadow:none;';
+  });
 </script>
-
 </body>
 </html>

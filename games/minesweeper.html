@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Minesweeper</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0d0d1a; font-family:'Segoe UI',sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#e2e8f0; user-select:none; touch-action:none; }
+  #back-link { position:fixed; top:14px; left:14px; color:rgba(255,255,255,0.7); text-decoration:none; font-size:14px; font-weight:600; background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:20px; backdrop-filter:blur(6px); z-index:50; }
+  #back-link:hover { color:#fff; }
+  #hud { display:flex; gap:16px; margin-bottom:20px; align-items:center; }
+  #hud span { background:rgba(255,255,255,0.07); padding:7px 18px; border-radius:20px; font-size:15px; font-weight:700; }
+  #board { display:grid; grid-template-columns:repeat(9,1fr); gap:4px; }
+  .cell {
+    width:clamp(32px,9vw,52px); height:clamp(32px,9vw,52px);
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:clamp(12px,3.5vw,20px); font-weight:800;
+    transition:background 0.15s;
+  }
+  .cell:hover:not(.revealed):not(.flagged) { background:rgba(255,255,255,0.14); }
+  .cell.revealed { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.06); cursor:default; }
+  .cell.flagged { background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.4); }
+  .cell.mine-boom { background:rgba(239,68,68,0.35); border-color:#ef4444; }
+  .n1{color:#60a5fa;} .n2{color:#4ade80;} .n3{color:#f87171;} .n4{color:#818cf8;}
+  .n5{color:#f97316;} .n6{color:#22d3ee;} .n7{color:#e879f9;} .n8{color:#94a3b8;}
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(5,5,20,0.9); z-index:30; }
+  .overlay h1 { font-size:clamp(2rem,7vw,3.5rem); font-weight:900; margin-bottom:12px; }
+  .overlay p { opacity:0.7; margin-bottom:30px; font-size:1.05rem; }
+  .btn { background:linear-gradient(135deg,#7c3aed,#06b6d4); color:#fff; border:none; padding:14px 44px; font-size:1.1rem; font-weight:700; border-radius:40px; cursor:pointer; box-shadow:0 4px 20px rgba(124,58,237,0.4); }
+  .btn:hover { transform:scale(1.06); }
+  #new-game-btn { margin-top:22px; background:linear-gradient(135deg,#7c3aed,#06b6d4); color:#fff; border:none; padding:11px 36px; font-size:1rem; font-weight:700; border-radius:40px; cursor:pointer; }
+  #new-game-btn:hover { transform:scale(1.06); }
+  #result-msg { font-size:1.2rem; font-weight:700; margin-top:12px; min-height:1.4rem; }
+</style>
+</head>
+<body>
+<a id="back-link" href="../index.html">← Back</a>
+
+<div class="overlay" id="start-screen">
+  <h1 id="s-title">💣 Minesweeper</h1>
+  <p>Left-click to reveal · Right-click to flag 🚩</p>
+  <button class="btn" id="start-btn">Play</button>
+</div>
+
+<div id="hud">
+  <span id="mines-left">💣 10</span>
+  <span id="timer-el">⏱ 0s</span>
+  <span id="status-el">Good luck!</span>
+</div>
+<div id="board"></div>
+<div id="result-msg"></div>
+<button id="new-game-btn">New Game</button>
+
+<script>
+(() => {
+  const ROWS=9, COLS=9, MINES=10;
+  const boardEl = document.getElementById('board');
+  const minesLeft = document.getElementById('mines-left');
+  const timerEl = document.getElementById('timer-el');
+  const statusEl = document.getElementById('status-el');
+  const resultMsg = document.getElementById('result-msg');
+  const startScreen = document.getElementById('start-screen');
+
+  let cells, mines, flagged, revealed, firstClick, gameOver, timerInt, seconds, flagCount;
+  let longPressTimer = null;
+
+  function initBoard() {
+    cells = Array(ROWS*COLS).fill(null).map((_,i) => ({ idx:i, mine:false, adj:0, revealed:false, flagged:false }));
+    mines = new Set(); flagged = new Set(); revealed = new Set();
+    firstClick = true; gameOver = false; seconds = 0; flagCount = 0;
+    clearInterval(timerInt);
+    timerEl.textContent = '⏱ 0s';
+    minesLeft.textContent = `💣 ${MINES}`;
+    statusEl.textContent = 'Good luck!';
+    resultMsg.textContent = '';
+    render();
+    const els = boardEl.querySelectorAll('.cell');
+    gsap.from(els, { scale:0, opacity:0, duration:0.25, stagger:{ amount:0.5, from:'center' }, ease:'back.out(1.5)' });
+  }
+
+  function placeMines(safeIdx) {
+    const candidates = [...Array(ROWS*COLS).keys()].filter(i => {
+      const sr=Math.floor(safeIdx/COLS), sc=safeIdx%COLS;
+      const r=Math.floor(i/COLS), c=i%COLS;
+      return Math.abs(r-sr)>1 || Math.abs(c-sc)>1;
+    });
+    while (mines.size < MINES) mines.add(candidates[Math.floor(Math.random()*candidates.length)]);
+    mines.forEach(i => cells[i].mine = true);
+    cells.forEach((cell,i) => {
+      if (cell.mine) return;
+      let adj=0;
+      for (const n of neighbors(i)) if (cells[n].mine) adj++;
+      cell.adj = adj;
+    });
+  }
+
+  function neighbors(i) {
+    const r=Math.floor(i/COLS), c=i%COLS, ns=[];
+    for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++) {
+      if (dr===0&&dc===0) continue;
+      const nr=r+dr, nc=c+dc;
+      if (nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) ns.push(nr*COLS+nc);
+    }
+    return ns;
+  }
+
+  function reveal(i, cascade=false) {
+    const cell = cells[i];
+    if (cell.revealed || cell.flagged) return;
+    cell.revealed = true; revealed.add(i);
+    const el = boardEl.children[i];
+    if (!cascade) gsap.from(el, { scale:0, duration:0.18, ease:'back.out(2)' });
+    if (cell.mine) {
+      el.textContent = '💥'; el.classList.add('mine-boom');
+      gsap.fromTo(el, {scale:1.5,backgroundColor:'rgba(239,68,68,0.6)'}, {scale:1,duration:0.4,ease:'elastic.out(1,0.3)'});
+      endGame(false); return;
+    }
+    el.classList.add('revealed');
+    if (cell.adj > 0) { el.textContent = cell.adj; el.classList.add(`n${cell.adj}`); }
+    else { el.textContent = ''; floodFill(i); }
+    checkWin();
+  }
+
+  let floodCount = 0;
+  function floodFill(i) {
+    floodCount = 0;
+    const queue = [i];
+    while (queue.length) {
+      const cur = queue.shift();
+      for (const n of neighbors(cur)) {
+        const nc = cells[n];
+        if (!nc.revealed && !nc.flagged && !nc.mine) {
+          nc.revealed = true; revealed.add(n); floodCount++;
+          const el = boardEl.children[n];
+          el.classList.add('revealed');
+          const delay = Math.min(floodCount * 0.015, 0.5);
+          gsap.from(el, { scale:0, duration:0.15, delay, ease:'back.out(1.5)' });
+          if (nc.adj > 0) { el.textContent = nc.adj; el.classList.add(`n${nc.adj}`); }
+          else queue.push(n);
+        }
+      }
+    }
+  }
+
+  function toggleFlag(i) {
+    const cell = cells[i];
+    if (cell.revealed) return;
+    const el = boardEl.children[i];
+    if (cell.flagged) {
+      cell.flagged = false; flagged.delete(i);
+      el.textContent = ''; el.classList.remove('flagged');
+      flagCount--; minesLeft.textContent = `💣 ${MINES - flagCount}`;
+    } else {
+      cell.flagged = true; flagged.add(i);
+      el.textContent = '🚩'; el.classList.add('flagged');
+      flagCount++; minesLeft.textContent = `💣 ${MINES - flagCount}`;
+      gsap.from(el, { scale:0, duration:0.25, ease:'back.out(2)' });
+    }
+  }
+
+  function checkWin() {
+    if (revealed.size === ROWS*COLS - MINES) endGame(true);
+  }
+
+  function endGame(win) {
+    gameOver = true; clearInterval(timerInt);
+    if (win) {
+      statusEl.textContent = '🎉 You win!';
+      resultMsg.textContent = `Cleared in ${seconds}s!`;
+      const els = [...boardEl.querySelectorAll('.cell')];
+      gsap.to(els, { y:-8, duration:0.3, stagger:{amount:0.5,from:'center'}, yoyo:true, repeat:1, ease:'power2.out' });
+    } else {
+      statusEl.textContent = '💥 BOOM!';
+      resultMsg.textContent = 'Better luck next time!';
+      mines.forEach(mi => {
+        const el = boardEl.children[mi];
+        if (!cells[mi].flagged) { el.textContent='💣'; el.classList.add('revealed'); }
+      });
+      gsap.fromTo(boardEl, {x:0}, {x:8,repeat:5,yoyo:true,duration:0.07,ease:'none'});
+    }
+  }
+
+  function render() {
+    boardEl.innerHTML = '';
+    for (let i=0; i<ROWS*COLS; i++) {
+      const el = document.createElement('div');
+      el.className = 'cell'; el.dataset.i = i;
+      el.addEventListener('click', onLeft);
+      el.addEventListener('contextmenu', e => { e.preventDefault(); onRight(e); });
+      el.addEventListener('touchstart', onTouchStart, {passive:false});
+      el.addEventListener('touchend', onTouchEnd, {passive:false});
+      boardEl.appendChild(el);
+    }
+  }
+
+  function onLeft(e) {
+    if (gameOver) return;
+    const i = parseInt(e.currentTarget.dataset.i);
+    if (firstClick) {
+      firstClick = false; placeMines(i);
+      timerInt = setInterval(() => { seconds++; timerEl.textContent=`⏱ ${seconds}s`; }, 1000);
+    }
+    reveal(i);
+  }
+
+  function onRight(e) {
+    if (gameOver) return;
+    const i = parseInt(e.currentTarget.dataset.i);
+    toggleFlag(i);
+  }
+
+  let touchTarget = null, touchTime = 0;
+  function onTouchStart(e) {
+    e.preventDefault();
+    touchTarget = e.currentTarget;
+    touchTime = Date.now();
+    longPressTimer = setTimeout(() => {
+      if (touchTarget) { onRight({ currentTarget: touchTarget }); touchTarget = null; }
+    }, 500);
+  }
+  function onTouchEnd(e) {
+    e.preventDefault();
+    clearTimeout(longPressTimer);
+    if (touchTarget && Date.now() - touchTime < 500) onLeft({ currentTarget: touchTarget });
+    touchTarget = null;
+  }
+
+  document.getElementById('new-game-btn').addEventListener('click', initBoard);
+  document.getElementById('start-btn').addEventListener('click', () => {
+    gsap.to(startScreen, { opacity:0, duration:0.4, onComplete:()=>{ startScreen.style.display='none'; initBoard(); } });
+  });
+
+  gsap.from('#s-title', { scale:0, duration:0.7, ease:'back.out(1.7)', delay:0.2 });
+  gsap.from('#start-btn', { scale:0, duration:0.5, ease:'back.out(2)', delay:0.6 });
+  initBoard();
+})();
+</script>
+</body>
+</html>
