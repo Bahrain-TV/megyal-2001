@@ -162,7 +162,10 @@
           brick.alive=false; brick.scale=1;
           gsap.to(brick,{scale:0,duration:0.2,ease:'back.in(2)'});
           score+=10; scoreEl.textContent=`⭐ ${score}`;
-          ball.vy*=-1;
+          // Determine which axis to reflect based on overlap depth
+          const overlapX = Math.min(ball.x+ball.r-brick.x, brick.x+brick.w-(ball.x-ball.r));
+          const overlapY = Math.min(ball.y+ball.r-brick.y, brick.y+brick.h-(ball.y-ball.r));
+          if(overlapX < overlapY) ball.vx*=-1; else ball.vy*=-1;
           if(Math.random()<0.1){
             const type=Math.random()<0.5?'wide':'multi';
             powerUps.push({x:brick.x+brick.w/2,y:brick.y,type,color:type==='wide'?'#60a5fa':'#f97316'});

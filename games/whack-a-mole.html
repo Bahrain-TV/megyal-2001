@@ -123,7 +123,11 @@
     score += pts;
     scoreEl.textContent = `⭐ ${score}`;
     const newLevel = Math.floor(score / 50) + 1;
-    if (newLevel > level) { level = newLevel; levelBadge.textContent = `Level ${level}`; gsap.from(levelBadge,{scale:1.5,duration:0.3,ease:'back.out(2)'}); }
+    if (newLevel > level) {
+      level = newLevel; levelBadge.textContent = `Level ${level}`;
+      gsap.from(levelBadge,{scale:1.5,duration:0.3,ease:'back.out(2)'});
+      clearInterval(spawnInterval); startSpawning();
+    }
 
     // score pop
     const rect = holes[i].el.getBoundingClientRect();
@@ -156,8 +160,6 @@
     countdownInterval = setInterval(() => {
       timeLeft--;
       timeEl.textContent = `⏱ ${timeLeft}s`;
-      clearInterval(spawnInterval);
-      startSpawning();
       if (timeLeft <= 0) endGame();
     }, 1000);
   }

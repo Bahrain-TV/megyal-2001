@@ -124,18 +124,20 @@
     checkWin();
   }
 
+  let floodCount = 0;
   function floodFill(i) {
+    floodCount = 0;
     const queue = [i];
     while (queue.length) {
       const cur = queue.shift();
       for (const n of neighbors(cur)) {
         const nc = cells[n];
         if (!nc.revealed && !nc.flagged && !nc.mine) {
-          nc.revealed = true; revealed.add(n);
+          nc.revealed = true; revealed.add(n); floodCount++;
           const el = boardEl.children[n];
           el.classList.add('revealed');
-          const delay = revealed.size * 0.008;
-          gsap.from(el, { scale:0, duration:0.15, delay:Math.min(delay,0.5), ease:'back.out(1.5)' });
+          const delay = Math.min(floodCount * 0.015, 0.5);
+          gsap.from(el, { scale:0, duration:0.15, delay, ease:'back.out(1.5)' });
           if (nc.adj > 0) { el.textContent = nc.adj; el.classList.add(`n${nc.adj}`); }
           else queue.push(n);
         }

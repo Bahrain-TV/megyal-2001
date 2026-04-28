@@ -90,6 +90,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
+    position: relative;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     cursor: pointer;
@@ -260,12 +261,8 @@
     card.addEventListener('mouseleave', () => {
       gsap.to(card, { scale: 1, duration: 0.25, ease: 'power2.inOut' });
     });
-    // Allow the anchor link to work normally — clicking the card navigates too
-    card.addEventListener('click', e => {
-      if (e.target !== link && !link.contains(e.target)) {
-        window.location.href = link.href;
-      }
-    });
+    // Make the whole card clickable by expanding the anchor to cover it
+    link.style.cssText += ';position:absolute;inset:0;padding:0;background:transparent;border-radius:inherit;box-shadow:none;';
   });
 </script>
 </body>
