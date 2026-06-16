@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tic Tac Toe</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1a2e;
+  color: #e6e6e6;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+}
+
+h1 {
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #58a6ff, #f85149);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.start-screen, .game-screen, .result-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.hidden { display: none !important; }
+
+.choose-label {
+  font-size: 1rem;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.symbol-picker {
+  display: flex;
+  gap: 16px;
+}
+
+.symbol-btn {
+  width: 80px;
+  height: 80px;
+  border: 2px solid #30363d;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.symbol-btn:hover {
+  border-color: #58a6ff;
+  background: rgba(88, 166, 255, 0.05);
+}
+
+.symbol-btn.selected {
+  border-color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.symbol-btn svg {
+  width: 40px;
+  height: 40px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.difficulty-picker {
+  display: flex;
+  gap: 12px;
+}
+
+.diff-btn {
+  padding: 10px 28px;
+  border: 2px solid #30363d;
+  border-radius: 8px;
+  background: transparent;
+  color: #e6e6e6;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.diff-btn:hover {
+  border-color: #58a6ff;
+}
+
+.diff-btn.selected {
+  border-color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+  color: #58a6ff;
+}
+
+.start-btn {
+  padding: 14px 48px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #58a6ff, #3b82f6);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.start-btn:hover { transform: scale(1.03); }
+.start-btn:active { transform: scale(0.97); }
+
+.scoreboard {
+  display: flex;
+  gap: 32px;
+  font-size: 0.9rem;
+  color: #8b949e;
+}
+
+.scoreboard span { font-weight: 600; }
+.score-w { color: #58a6ff; }
+.score-l { color: #f85149; }
+.score-d { color: #8b949e; }
+
+.turn-indicator {
+  font-size: 1rem;
+  color: #8b949e;
+  height: 24px;
+  transition: color 0.2s;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: min(85vw, 360px);
+  height: min(85vw, 360px);
+  background: #30363d;
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.cell {
+  background: #1a1a2e;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.cell:hover:not(.taken) {
+  background: #22223a;
+}
+
+.cell svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 55%;
+  height: 55%;
+}
+
+.cell svg.x-mark line {
+  stroke: #58a6ff;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 80;
+  stroke-dashoffset: 80;
+  animation: drawLine 0.35s ease forwards;
+}
+
+.cell svg.o-mark circle {
+  stroke: #f85149;
+  stroke-width: 7;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawCircle 0.4s ease forwards;
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes drawCircle {
+  to { stroke-dashoffset: 0; }
+}
+
+.cell.win-cell {
+  background: rgba(88, 166, 255, 0.12);
+  animation: pulseWin 0.6s ease;
+}
+
+@keyframes pulseWin {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.win-line-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.win-line-container line {
+  stroke: #ffd700;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: drawWinLine 0.5s 0.15s ease forwards;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.5));
+}
+
+@keyframes drawWinLine {
+  to { stroke-dashoffset: 0; }
+}
+
+.board-wrapper {
+  position: relative;
+}
+
+.result-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(26, 26, 46, 0.92);
+  backdrop-filter: blur(4px);
+  justify-content: center;
+  z-index: 10;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.result-text {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.result-text.win { color: #58a6ff; }
+.result-text.lose { color: #f85149; }
+.result-text.draw { color: #8b949e; }
+
+.play-again-btn {
+  padding: 14px 48px;
+  border: 2px solid #30363d;
+  border-radius: 10px;
+  background: transparent;
+  color: #e6e6e6;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.play-again-btn:hover {
+  border-color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.back-btn {
+  padding: 10px 24px;
+  border: none;
+  background: transparent;
+  color: #8b949e;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.back-btn:hover { color: #e6e6e6; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Tic Tac Toe</h1>
+
+  <div class="start-screen" id="startScreen">
+    <div class="choose-label">Choose your mark</div>
+    <div class="symbol-picker">
+      <button class="symbol-btn selected" data-symbol="X">
+        <svg viewBox="0 0 80 80"><line x1="18" y1="18" x2="62" y2="62" stroke="#58a6ff" stroke-width="8" stroke-linecap="round"/><line x1="62" y1="18" x2="18" y2="62" stroke="#58a6ff" stroke-width="8" stroke-linecap="round"/></svg>
+      </button>
+      <button class="symbol-btn" data-symbol="O">
+        <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="25" stroke="#f85149" stroke-width="7" fill="none"/></svg>
+      </button>
+    </div>
+    <div class="choose-label">Difficulty</div>
+    <div class="difficulty-picker">
+      <button class="diff-btn" data-diff="easy">Easy</button>
+      <button class="diff-btn selected" data-diff="hard">Hard</button>
+    </div>
+    <button class="start-btn" id="startBtn">Play</button>
+  </div>
+
+  <div class="game-screen hidden" id="gameScreen">
+    <div class="scoreboard">
+      <div>Wins: <span class="score-w" id="scoreW">0</span></div>
+      <div>Draws: <span class="score-d" id="scoreD">0</span></div>
+      <div>Losses: <span class="score-l" id="scoreL">0</span></div>
+    </div>
+    <div class="turn-indicator" id="turnIndicator"></div>
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+      <svg class="win-line-container hidden" id="winLineSvg" viewBox="0 0 360 360"></svg>
+    </div>
+    <button class="back-btn" id="backBtn">&#8592; Menu</button>
+  </div>
+
+  <div class="result-overlay hidden" id="resultOverlay">
+    <div class="result-text" id="resultText"></div>
+    <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+    <button class="back-btn" id="resultBackBtn">&#8592; Menu</button>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+let playerMark, aiMark, difficulty, board, currentTurn, gameOver, scores = { w: 0, l: 0, d: 0 };
+
+const WINS = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+const LINE_COORDS = [
+  [[0.17,0.17],[0.83,0.17]],
+  [[0.17,0.5],[0.83,0.5]],
+  [[0.17,0.83],[0.83,0.83]],
+  [[0.17,0.17],[0.17,0.83]],
+  [[0.5,0.17],[0.5,0.83]],
+  [[0.83,0.17],[0.83,0.83]],
+  [[0.17,0.17],[0.83,0.83]],
+  [[0.83,0.17],[0.17,0.83]]
+];
+
+$$('.symbol-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.symbol-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+$$('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.diff-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+$('#startBtn').addEventListener('click', startGame);
+$('#playAgainBtn').addEventListener('click', () => { $('#resultOverlay').classList.add('hidden'); startGame(); });
+$('#backBtn').addEventListener('click', goToMenu);
+$('#resultBackBtn').addEventListener('click', () => { $('#resultOverlay').classList.add('hidden'); goToMenu(); });
+
+function goToMenu() {
+  $('#gameScreen').classList.add('hidden');
+  $('#startScreen').classList.remove('hidden');
+}
+
+function startGame() {
+  playerMark = $('.symbol-btn.selected').dataset.symbol;
+  aiMark = playerMark === 'X' ? 'O' : 'X';
+  difficulty = $('.diff-btn.selected').dataset.diff;
+  board = Array(9).fill(null);
+  gameOver = false;
+  currentTurn = 'X';
+
+  $('#startScreen').classList.add('hidden');
+  $('#gameScreen').classList.remove('hidden');
+  $('#winLineSvg').classList.add('hidden');
+  $('#winLineSvg').innerHTML = '';
+  updateScores();
+  renderBoard();
+  updateTurnIndicator();
+
+  if (aiMark === 'X') {
+    setTimeout(aiMove, 400);
+  }
+}
+
+function renderBoard() {
+  const boardEl = $('#board');
+  boardEl.innerHTML = '';
+  board.forEach((val, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (val ? ' taken' : '');
+    cell.dataset.index = i;
+    if (val) cell.appendChild(createMark(val));
+    cell.addEventListener('click', () => handleCellClick(i));
+    boardEl.appendChild(cell);
+  });
+}
+
+function createMark(mark) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 80 80');
+  if (mark === 'X') {
+    svg.classList.add('x-mark');
+    const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l1.setAttribute('x1','18'); l1.setAttribute('y1','18');
+    l1.setAttribute('x2','62'); l1.setAttribute('y2','62');
+    const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l2.setAttribute('x1','62'); l2.setAttribute('y1','18');
+    l2.setAttribute('x2','18'); l2.setAttribute('y2','62');
+    svg.append(l1, l2);
+  } else {
+    svg.classList.add('o-mark');
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx','40'); c.setAttribute('cy','40'); c.setAttribute('r','25');
+    svg.appendChild(c);
+  }
+  return svg;
+}
+
+function handleCellClick(i) {
+  if (gameOver || board[i] || currentTurn !== playerMark) return;
+  placeMark(i, playerMark);
+  if (!gameOver) setTimeout(aiMove, 300);
+}
+
+function placeMark(i, mark) {
+  board[i] = mark;
+  const cell = $$('.cell')[i];
+  cell.classList.add('taken');
+  cell.appendChild(createMark(mark));
+
+  const winCombo = checkWin(mark);
+  if (winCombo !== null) {
+    gameOver = true;
+    highlightWin(winCombo);
+    const result = mark === playerMark ? 'win' : 'lose';
+    if (result === 'win') scores.w++;
+    else scores.l++;
+    updateScores();
+    setTimeout(() => showResult(result), 800);
+    return;
+  }
+
+  if (board.every(c => c !== null)) {
+    gameOver = true;
+    scores.d++;
+    updateScores();
+    setTimeout(() => showResult('draw'), 600);
+    return;
+  }
+
+  currentTurn = currentTurn === 'X' ? 'O' : 'X';
+  updateTurnIndicator();
+}
+
+function checkWin(mark) {
+  for (let i = 0; i < WINS.length; i++) {
+    if (WINS[i].every(idx => board[idx] === mark)) return i;
+  }
+  return null;
+}
+
+function highlightWin(comboIndex) {
+  WINS[comboIndex].forEach(idx => {
+    $$('.cell')[idx].classList.add('win-cell');
+  });
+  const svg = $('#winLineSvg');
+  svg.classList.remove('hidden');
+  const coords = LINE_COORDS[comboIndex];
+  const boardSize = $('#board').offsetWidth;
+  svg.setAttribute('viewBox', `0 0 ${boardSize} ${boardSize}`);
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', coords[0][0] * boardSize);
+  line.setAttribute('y1', coords[0][1] * boardSize);
+  line.setAttribute('x2', coords[1][0] * boardSize);
+  line.setAttribute('y2', coords[1][1] * boardSize);
+  svg.appendChild(line);
+}
+
+function updateTurnIndicator() {
+  const indicator = $('#turnIndicator');
+  if (currentTurn === playerMark) {
+    indicator.textContent = 'Your turn';
+    indicator.style.color = playerMark === 'X' ? '#58a6ff' : '#f85149';
+  } else {
+    indicator.textContent = 'AI thinking...';
+    indicator.style.color = '#8b949e';
+  }
+}
+
+function showResult(result) {
+  const text = $('#resultText');
+  text.className = 'result-text ' + result;
+  text.textContent = result === 'win' ? 'You Win!' : result === 'lose' ? 'You Lose!' : "It's a Draw!";
+  $('#resultOverlay').classList.remove('hidden');
+}
+
+function updateScores() {
+  $('#scoreW').textContent = scores.w;
+  $('#scoreL').textContent = scores.l;
+  $('#scoreD').textContent = scores.d;
+}
+
+function aiMove() {
+  if (gameOver) return;
+  const move = difficulty === 'hard' ? bestMove() : randomMove();
+  if (move !== -1) placeMark(move, aiMark);
+}
+
+function randomMove() {
+  const empty = board.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
+  return empty.length ? empty[Math.floor(Math.random() * empty.length)] : -1;
+}
+
+function bestMove() {
+  let best = -Infinity, move = -1;
+  for (let i = 0; i < 9; i++) {
+    if (board[i]) continue;
+    board[i] = aiMark;
+    const score = minimax(board, 0, false, -Infinity, Infinity);
+    board[i] = null;
+    if (score > best) { best = score; move = i; }
+  }
+  return move;
+}
+
+function minimax(b, depth, isMax, alpha, beta) {
+  if (checkWin(aiMark) !== null) return 10 - depth;
+  if (checkWin(playerMark) !== null) return depth - 10;
+  if (b.every(c => c !== null)) return 0;
+
+  if (isMax) {
+    let best = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = aiMark;
+      best = Math.max(best, minimax(b, depth + 1, false, alpha, beta));
+      b[i] = null;
+      alpha = Math.max(alpha, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = playerMark;
+      best = Math.min(best, minimax(b, depth + 1, true, alpha, beta));
+      b[i] = null;
+      beta = Math.min(beta, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+</script>
+</body>
+</html>

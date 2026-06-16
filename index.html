@@ -2,539 +2,323 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Egg Catcher</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Arcade</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-  body {
-    overflow: hidden;
-    background: #1a1a2e;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    touch-action: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
+body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+}
 
-  canvas {
-    display: block;
-  }
+.hero {
+    text-align: center;
+    padding: 60px 24px 40px;
+    background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+    border-bottom: 1px solid #21262d;
+}
 
-  #ui-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    z-index: 10;
-  }
+.hero h1 {
+    font-size: clamp(36px, 7vw, 64px);
+    font-weight: 900;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #58a6ff, #3fb950, #f0c040, #f85149);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+}
 
-  #hud {
-    position: absolute;
-    top: 12px; left: 12px; right: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #fff;
-    font-size: 18px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  }
+.hero p {
+    font-size: clamp(16px, 2.5vw, 20px);
+    color: #8b949e;
+    max-width: 500px;
+    margin: 0 auto;
+}
 
-  #hud span {
-    background: rgba(0,0,0,0.35);
-    padding: 6px 14px;
+.game-count {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 6px 16px;
+    background: #21262d;
+    border: 1px solid #30363d;
     border-radius: 20px;
-    backdrop-filter: blur(4px);
-  }
+    font-size: 14px;
+    color: #58a6ff;
+    font-weight: 600;
+}
 
-  #start-screen, #game-over-screen {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 40px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    border-color: #58a6ff;
+    box-shadow: 0 8px 30px rgba(88, 166, 255, 0.1);
+}
+
+.card-icon {
+    height: 160px;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
     align-items: center;
-    background: rgba(10, 10, 30, 0.88);
-    color: #fff;
-    pointer-events: auto;
-    z-index: 20;
-  }
+    justify-content: center;
+    font-size: 64px;
+    position: relative;
+    overflow: hidden;
+}
 
-  #game-over-screen { display: none; }
+.card-body {
+    padding: 20px;
+    border-top: 1px solid #21262d;
+}
 
-  .screen-title {
-    font-size: clamp(32px, 8vw, 64px);
-    font-weight: 800;
-    margin-bottom: 10px;
-    letter-spacing: 2px;
-  }
-
-  .screen-sub {
-    font-size: clamp(14px, 3vw, 22px);
-    opacity: 0.75;
-    margin-bottom: 30px;
-  }
-
-  .btn {
-    pointer-events: auto;
-    background: linear-gradient(135deg, #f7971e, #ffd200);
-    color: #1a1a2e;
-    border: none;
-    padding: 14px 42px;
+.card-body h2 {
     font-size: 20px;
     font-weight: 700;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 4px 20px rgba(255, 210, 0, 0.35);
-  }
+    color: #e6e6e6;
+    margin-bottom: 6px;
+}
 
-  .btn:hover { transform: scale(1.06); box-shadow: 0 6px 28px rgba(255, 210, 0, 0.5); }
-  .btn:active { transform: scale(0.97); }
+.card-body p {
+    font-size: 14px;
+    color: #8b949e;
+    line-height: 1.5;
+}
 
-  #final-score {
-    font-size: clamp(48px, 10vw, 80px);
-    font-weight: 900;
-    color: #ffd200;
-    margin: 10px 0;
-  }
-
-  .lives-display {
+.card-tags {
     display: flex;
-    gap: 4px;
-    align-items: center;
-  }
+    gap: 6px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
 
-  .lives-display .heart {
-    font-size: 22px;
-    transition: opacity 0.3s;
-  }
+.tag {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+}
+.tag.action { color: #f85149; border-color: #da363380; }
+.tag.puzzle { color: #d2a8ff; border-color: #8b5cf680; }
+.tag.arcade { color: #58a6ff; border-color: #58a6ff80; }
+.tag.classic { color: #3fb950; border-color: #3fb95080; }
+.tag.reflex { color: #f0c040; border-color: #f0c04080; }
+
+.card-icon.egg { background: linear-gradient(135deg, #2d6a4f, #1a1a2e); }
+.card-icon.snake { background: linear-gradient(135deg, #0f3460, #1a1a2e); }
+.card-icon.memory { background: linear-gradient(135deg, #4a1942, #1a1a2e); }
+.card-icon.whack { background: linear-gradient(135deg, #5c4033, #1a1a2e); }
+.card-icon.breakout { background: linear-gradient(135deg, #c0392b30, #1a1a2e); }
+.card-icon.ttt { background: linear-gradient(135deg, #16213e, #1a1a2e); }
+.card-icon.reaction { background: linear-gradient(135deg, #1b4332, #1a1a2e); }
+.card-icon.puzzle2048 { background: linear-gradient(135deg, #3d5a80, #1a1a2e); }
+.card-icon.flappy { background: linear-gradient(135deg, #0f3460, #1a1a2e); }
+
+.tools-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+}
+
+.tools-section h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #e6e6e6;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #21262d;
+}
+
+.tool-card {
+    display: block;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, border-color 0.2s;
+}
+.tool-card:hover {
+    transform: translateY(-2px);
+    border-color: #3fb950;
+}
+.tool-card h3 {
+    color: #3fb950;
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+.tool-card p {
+    color: #8b949e;
+    font-size: 14px;
+}
+
+footer {
+    text-align: center;
+    padding: 30px;
+    color: #484f58;
+    font-size: 13px;
+    border-top: 1px solid #21262d;
+}
+footer a { color: #58a6ff; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
 
-<canvas id="game-canvas"></canvas>
-
-<div id="ui-overlay">
-  <div id="hud">
-    <span id="score-display">Score: 0</span>
-    <span id="level-display">Level 1</span>
-    <div class="lives-display" id="lives-display"></div>
-  </div>
+<div class="hero">
+    <h1>Game Arcade</h1>
+    <p>A collection of browser-based games. No installs, no ads, just play.</p>
+    <div class="game-count">9 Games</div>
 </div>
 
-<div id="start-screen">
-  <div class="screen-title">Egg Catcher</div>
-  <div class="screen-sub">Move the basket to catch falling eggs!</div>
-  <div class="screen-sub" style="margin-top:-18px; font-size:14px; opacity:0.5;">Mouse or touch supported</div>
-  <button class="btn" id="start-btn">Play</button>
+<div class="grid">
+
+    <a href="games/egg-catcher.html" class="card">
+        <div class="card-icon egg">&#x1F95A;</div>
+        <div class="card-body">
+            <h2>Egg Catcher</h2>
+            <p>Move the basket to catch falling eggs. Avoid the rotten ones! Golden and diamond eggs give bonus points.</p>
+            <div class="card-tags">
+                <span class="tag arcade">Arcade</span>
+                <span class="tag reflex">Reflex</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/snake.html" class="card">
+        <div class="card-icon snake">&#x1F40D;</div>
+        <div class="card-body">
+            <h2>Snake</h2>
+            <p>The classic snake game. Eat food to grow longer, but don't hit the walls or yourself.</p>
+            <div class="card-tags">
+                <span class="tag classic">Classic</span>
+                <span class="tag arcade">Arcade</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/memory.html" class="card">
+        <div class="card-icon memory">&#x1F0CF;</div>
+        <div class="card-body">
+            <h2>Memory Match</h2>
+            <p>Flip cards and find matching pairs. Test your memory with a timer and move counter.</p>
+            <div class="card-tags">
+                <span class="tag puzzle">Puzzle</span>
+                <span class="tag classic">Classic</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/whack-a-mole.html" class="card">
+        <div class="card-icon whack">&#x1F439;</div>
+        <div class="card-body">
+            <h2>Whack-a-Mole</h2>
+            <p>Smash the moles before they hide! Watch out for bombs. 30 seconds of pure chaos.</p>
+            <div class="card-tags">
+                <span class="tag reflex">Reflex</span>
+                <span class="tag action">Action</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/breakout.html" class="card">
+        <div class="card-icon breakout">&#x1F9F1;</div>
+        <div class="card-body">
+            <h2>Breakout</h2>
+            <p>Classic brick breaker. Bounce the ball to destroy all bricks. Particle effects on impact.</p>
+            <div class="card-tags">
+                <span class="tag arcade">Arcade</span>
+                <span class="tag classic">Classic</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/tic-tac-toe.html" class="card">
+        <div class="card-icon ttt">&#x274C;</div>
+        <div class="card-body">
+            <h2>Tic-Tac-Toe</h2>
+            <p>Challenge an AI opponent. Easy mode for casual play, hard mode uses minimax - can you beat it?</p>
+            <div class="card-tags">
+                <span class="tag classic">Classic</span>
+                <span class="tag puzzle">Puzzle</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/reaction-test.html" class="card">
+        <div class="card-icon reaction">&#x26A1;</div>
+        <div class="card-body">
+            <h2>Reaction Test</h2>
+            <p>How fast are you? Wait for green, then click. 5 rounds to find your average reaction time.</p>
+            <div class="card-tags">
+                <span class="tag reflex">Reflex</span>
+                <span class="tag action">Action</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/2048.html" class="card">
+        <div class="card-icon puzzle2048">&#x1F522;</div>
+        <div class="card-body">
+            <h2>2048</h2>
+            <p>Slide numbered tiles to merge them. Reach 2048 to win - or keep going for an even higher score.</p>
+            <div class="card-tags">
+                <span class="tag puzzle">Puzzle</span>
+                <span class="tag classic">Classic</span>
+            </div>
+        </div>
+    </a>
+
+    <a href="games/flappy.html" class="card">
+        <div class="card-icon flappy">&#x1F426;</div>
+        <div class="card-body">
+            <h2>Flappy Bird</h2>
+            <p>Tap to flap. Navigate through pipes. Simple to learn, brutally hard to master.</p>
+            <div class="card-tags">
+                <span class="tag arcade">Arcade</span>
+                <span class="tag action">Action</span>
+            </div>
+        </div>
+    </a>
+
 </div>
 
-<div id="game-over-screen">
-  <div class="screen-title">Game Over</div>
-  <div id="final-score">0</div>
-  <div class="screen-sub">eggs caught</div>
-  <button class="btn" id="restart-btn">Play Again</button>
+<div class="tools-section">
+    <h2>Tools</h2>
+    <div class="tool-card">
+        <h3>IG Live Score Engine</h3>
+        <p>Real-time scoring engine for Instagram Live quiz games. Watches comments, tracks scores, and displays an animated leaderboard overlay. Includes admin panel and JSON API.</p>
+    </div>
 </div>
 
-<script>
-(() => {
-  // ---- Canvas Setup ----
-  const canvas = document.getElementById('game-canvas');
-  const ctx = canvas.getContext('2d');
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  // ---- DOM refs ----
-  const scoreDisplay = document.getElementById('score-display');
-  const levelDisplay = document.getElementById('level-display');
-  const livesDisplay = document.getElementById('lives-display');
-  const startScreen = document.getElementById('start-screen');
-  const gameOverScreen = document.getElementById('game-over-screen');
-  const finalScoreEl = document.getElementById('final-score');
-  const startBtn = document.getElementById('start-btn');
-  const restartBtn = document.getElementById('restart-btn');
-
-  // ---- Game State ----
-  let running = false;
-  let score = 0;
-  let lives = 5;
-  let level = 1;
-  let eggs = [];
-  let particles = [];
-  let spawnTimer = 0;
-  let basketX = 0;
-  let targetBasketX = 0;
-  let animFrameId = null;
-  let lastTime = 0;
-
-  // ---- Constants ----
-  const BASKET_WIDTH_RATIO = 0.18;   // fraction of canvas width
-  const BASKET_HEIGHT_RATIO = 0.065;
-  const EGG_RADIUS_RATIO = 0.022;
-  const MAX_LIVES = 5;
-
-  // ---- Derived helpers ----
-  function bw() { return canvas.width * BASKET_WIDTH_RATIO; }
-  function bh() { return canvas.height * BASKET_HEIGHT_RATIO; }
-  function er() { return Math.max(12, canvas.width * EGG_RADIUS_RATIO); }
-  function basketY() { return canvas.height - bh() - 20; }
-
-  // ---- Spawn config per level ----
-  function spawnInterval() { return Math.max(250, 900 - level * 70); }
-  function eggSpeed() { return (1.5 + level * 0.35) * (canvas.height / 800); }
-
-  // ---- Egg types ----
-  const EGG_TYPES = [
-    { weight: 60, color: '#fff5e1', outline: '#e8d5b7', points: 1, label: 'normal' },
-    { weight: 22, color: '#ffd700', outline: '#c9a400', points: 3, label: 'golden' },
-    { weight: 12, color: '#ff6b6b', outline: '#c0392b', points: -1, label: 'rotten' },
-    { weight: 6, color: '#7efff5', outline: '#00b4d8', points: 5, label: 'diamond' },
-  ];
-
-  function pickEggType() {
-    const total = EGG_TYPES.reduce((s, t) => s + t.weight, 0);
-    let r = Math.random() * total;
-    for (const t of EGG_TYPES) {
-      r -= t.weight;
-      if (r <= 0) return t;
-    }
-    return EGG_TYPES[0];
-  }
-
-  // ---- Input ----
-  function handlePointer(x) {
-    targetBasketX = x - bw() / 2;
-  }
-
-  canvas.addEventListener('mousemove', e => { if (running) handlePointer(e.clientX); });
-  canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (running && e.touches.length) handlePointer(e.touches[0].clientX);
-  }, { passive: false });
-  canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (running && e.touches.length) handlePointer(e.touches[0].clientX);
-  }, { passive: false });
-
-  // ---- Particles ----
-  function spawnParticles(x, y, color, count) {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 3;
-      particles.push({
-        x, y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2,
-        life: 1,
-        decay: 0.015 + Math.random() * 0.025,
-        size: 2 + Math.random() * 4,
-        color,
-      });
-    }
-  }
-
-  // ---- Lives UI ----
-  function renderLives() {
-    let html = '';
-    for (let i = 0; i < MAX_LIVES; i++) {
-      html += `<span class="heart" style="opacity:${i < lives ? 1 : 0.2}">&#10084;&#65039;</span>`;
-    }
-    livesDisplay.innerHTML = html;
-  }
-
-  // ---- Game Loop ----
-  function update(dt) {
-    // Smooth basket movement
-    basketX += (targetBasketX - basketX) * Math.min(1, dt * 12);
-    // Clamp
-    basketX = Math.max(0, Math.min(canvas.width - bw(), basketX));
-
-    // Spawn eggs
-    spawnTimer -= dt * 1000;
-    if (spawnTimer <= 0) {
-      spawnTimer = spawnInterval();
-      const type = pickEggType();
-      const radius = er();
-      eggs.push({
-        x: radius + Math.random() * (canvas.width - radius * 2),
-        y: -radius,
-        speed: eggSpeed() * (0.85 + Math.random() * 0.3),
-        wobbleOffset: Math.random() * Math.PI * 2,
-        radius,
-        type,
-        rotation: 0,
-        rotSpeed: (Math.random() - 0.5) * 2,
-      });
-    }
-
-    // Move eggs
-    const by = basketY();
-    const bWidth = bw();
-    const bHeight = bh();
-
-    for (let i = eggs.length - 1; i >= 0; i--) {
-      const egg = eggs[i];
-      egg.y += egg.speed * dt * 60;
-      egg.wobbleOffset += dt * 3;
-      egg.rotation += egg.rotSpeed * dt;
-
-      // Collision with basket
-      const eggBottom = egg.y + egg.radius;
-      if (
-        eggBottom >= by &&
-        eggBottom <= by + bHeight + egg.speed * 2 &&
-        egg.x >= basketX - egg.radius * 0.5 &&
-        egg.x <= basketX + bWidth + egg.radius * 0.5
-      ) {
-        // Caught!
-        const pts = egg.type.points;
-        score = Math.max(0, score + pts);
-        scoreDisplay.textContent = `Score: ${score}`;
-
-        if (pts > 0) {
-          spawnParticles(egg.x, egg.y, egg.type.color, 10);
-        } else {
-          spawnParticles(egg.x, egg.y, '#ff0000', 15);
-          lives = Math.max(0, lives - 1);
-          renderLives();
-          if (lives <= 0) { endGame(); return; }
-        }
-
-        eggs.splice(i, 1);
-
-        // Level up
-        const newLevel = Math.floor(score / 15) + 1;
-        if (newLevel > level) {
-          level = newLevel;
-          levelDisplay.textContent = `Level ${level}`;
-        }
-        continue;
-      }
-
-      // Off screen (missed)
-      if (egg.y - egg.radius > canvas.height) {
-        if (egg.type.points > 0) {
-          // missed a good egg
-          lives--;
-          renderLives();
-          spawnParticles(egg.x, canvas.height - 10, '#ff4444', 8);
-          if (lives <= 0) { endGame(); return; }
-        }
-        eggs.splice(i, 1);
-      }
-    }
-
-    // Update particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.08; // gravity
-      p.life -= p.decay;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-  }
-
-  // ---- Drawing ----
-  function drawBackground() {
-    // Sky gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, '#16213e');
-    grad.addColorStop(0.5, '#1a1a2e');
-    grad.addColorStop(1, '#0f3460');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Simple ground
-    ctx.fillStyle = '#2d6a4f';
-    ctx.fillRect(0, canvas.height - 14, canvas.width, 14);
-    ctx.fillStyle = '#40916c';
-    ctx.fillRect(0, canvas.height - 14, canvas.width, 4);
-  }
-
-  function drawEgg(egg) {
-    ctx.save();
-    ctx.translate(egg.x + Math.sin(egg.wobbleOffset) * 3, egg.y);
-    ctx.rotate(egg.rotation);
-
-    const r = egg.radius;
-    const type = egg.type;
-
-    // Egg shape (oval)
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.72, r, 0, 0, Math.PI * 2);
-    ctx.fillStyle = type.color;
-    ctx.fill();
-    ctx.strokeStyle = type.outline;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Shine highlight
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.2, -r * 0.35, r * 0.18, r * 0.28, -0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fill();
-
-    // Label for special eggs
-    if (type.label === 'golden') {
-      ctx.fillStyle = '#b8860b';
-      ctx.font = `bold ${Math.round(r * 0.7)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('★', 0, 1);
-    } else if (type.label === 'rotten') {
-      ctx.fillStyle = '#7a1a1a';
-      ctx.font = `bold ${Math.round(r * 0.7)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('✕', 0, 1);
-    } else if (type.label === 'diamond') {
-      ctx.fillStyle = '#006d77';
-      ctx.font = `bold ${Math.round(r * 0.7)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('◆', 0, 1);
-    }
-
-    ctx.restore();
-  }
-
-  function drawBasket() {
-    const x = basketX;
-    const y = basketY();
-    const w = bw();
-    const h = bh();
-    const r = 12;
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    ctx.beginPath();
-    ctx.ellipse(x + w / 2, y + h + 4, w / 2.2, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Basket body
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w - 6, y + h - r);
-    ctx.quadraticCurveTo(x + w - 8, y + h, x + w - 8 - r, y + h);
-    ctx.lineTo(x + 8 + r, y + h);
-    ctx.quadraticCurveTo(x + 8, y + h, x + 6, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-
-    const basketGrad = ctx.createLinearGradient(x, y, x, y + h);
-    basketGrad.addColorStop(0, '#c9a96e');
-    basketGrad.addColorStop(0.5, '#a67c52');
-    basketGrad.addColorStop(1, '#8b5e3c');
-    ctx.fillStyle = basketGrad;
-    ctx.fill();
-    ctx.strokeStyle = '#6b3e26';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Weave lines
-    ctx.strokeStyle = 'rgba(107, 62, 38, 0.35)';
-    ctx.lineWidth = 1.5;
-    const stripes = 5;
-    for (let i = 1; i < stripes; i++) {
-      const ly = y + (h / stripes) * i;
-      ctx.beginPath();
-      ctx.moveTo(x + 6, ly);
-      ctx.lineTo(x + w - 6, ly);
-      ctx.stroke();
-    }
-
-    // Rim
-    ctx.beginPath();
-    ctx.moveTo(x - 3, y);
-    ctx.lineTo(x + w + 3, y);
-    ctx.strokeStyle = '#5a3420';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  }
-
-  function drawParticles() {
-    for (const p of particles) {
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function draw() {
-    drawBackground();
-    drawBasket();
-    for (const egg of eggs) drawEgg(egg);
-    drawParticles();
-  }
-
-  // ---- Main Loop ----
-  function loop(timestamp) {
-    if (!running) return;
-    const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
-    lastTime = timestamp;
-
-    update(dt);
-    draw();
-
-    animFrameId = requestAnimationFrame(loop);
-  }
-
-  // ---- Game Lifecycle ----
-  function startGame() {
-    score = 0;
-    lives = MAX_LIVES;
-    level = 1;
-    eggs = [];
-    particles = [];
-    spawnTimer = 0;
-    basketX = canvas.width / 2 - bw() / 2;
-    targetBasketX = basketX;
-
-    scoreDisplay.textContent = 'Score: 0';
-    levelDisplay.textContent = 'Level 1';
-    renderLives();
-
-    startScreen.style.display = 'none';
-    gameOverScreen.style.display = 'none';
-
-    running = true;
-    lastTime = performance.now();
-    animFrameId = requestAnimationFrame(loop);
-  }
-
-  function endGame() {
-    running = false;
-    if (animFrameId) cancelAnimationFrame(animFrameId);
-
-    finalScoreEl.textContent = score;
-    gameOverScreen.style.display = 'flex';
-  }
-
-  startBtn.addEventListener('click', startGame);
-  startBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
-  restartBtn.addEventListener('click', startGame);
-  restartBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
-
-  // Initial draw
-  renderLives();
-  drawBackground();
-})();
-</script>
+<footer>
+    Built with HTML5 Canvas &amp; CSS &mdash; <a href="https://github.com/Bahrain-TV/megyal-2001">View on GitHub</a>
+</footer>
 
 </body>
 </html>

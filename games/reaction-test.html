@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Reaction Test</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #e0e0e0;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+
+  #game {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    background-color: #1a1a2e;
+  }
+
+  #game.waiting {
+    background-color: #2d1b1b;
+    cursor: default;
+  }
+
+  #game.go {
+    background-color: #0a6e3a;
+    cursor: pointer;
+  }
+
+  #game.too-soon {
+    background-color: #8b1a1a;
+  }
+
+  .screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .screen.active { display: flex; }
+
+  h1 {
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: clamp(0.9rem, 3vw, 1.1rem);
+    color: #888;
+    margin-bottom: 40px;
+  }
+
+  .btn {
+    background: linear-gradient(135deg, #7b2ff7, #00d4ff);
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 16px 48px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 24px rgba(123, 47, 247, 0.4);
+    letter-spacing: 0.5px;
+  }
+
+  .btn:hover { transform: scale(1.05); }
+  .btn:active { transform: scale(0.97); }
+
+  .game-text {
+    font-size: clamp(1.5rem, 6vw, 2.5rem);
+    font-weight: 700;
+    pointer-events: none;
+  }
+
+  .game-subtext {
+    font-size: clamp(0.9rem, 3vw, 1.1rem);
+    margin-top: 12px;
+    color: rgba(255,255,255,0.7);
+    pointer-events: none;
+  }
+
+  .reaction-time {
+    font-size: clamp(3rem, 12vw, 5rem);
+    font-weight: 800;
+    color: #00ff88;
+    pointer-events: none;
+  }
+
+  .rating {
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
+    margin-top: 8px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  .round-counter {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.5);
+    background: rgba(0,0,0,0.3);
+    padding: 6px 16px;
+    border-radius: 20px;
+    backdrop-filter: blur(6px);
+    z-index: 10;
+  }
+
+  .history {
+    width: 100%;
+    max-width: 360px;
+    margin: 24px 0;
+  }
+
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    margin: 4px 0;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    font-size: 0.95rem;
+    transition: background 0.2s ease;
+  }
+
+  .history-item.best {
+    background: rgba(0, 255, 136, 0.15);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+  }
+
+  .history-item .round-label { color: #888; }
+  .history-item .time-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .history-item.best .time-value { color: #00ff88; }
+
+  .results-avg {
+    font-size: clamp(2.5rem, 10vw, 4rem);
+    font-weight: 800;
+    margin: 8px 0;
+    background: linear-gradient(135deg, #00ff88, #00d4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .results-label {
+    font-size: 0.95rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .results-rating {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 4px 0 24px;
+    color: #00d4ff;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+
+  .pulse { animation: pulse 1.5s ease-in-out infinite; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="round-counter" id="roundCounter" style="display:none">
+    Round <span id="roundNum">1</span> / 5
+  </div>
+
+  <div class="screen active" id="startScreen">
+    <h1>Reaction Test</h1>
+    <p class="subtitle">How fast can you react?</p>
+    <button class="btn" id="startBtn">Start</button>
+  </div>
+
+  <div class="screen" id="waitScreen">
+    <div class="game-text pulse" style="color:#ff6b6b">Wait for green...</div>
+    <div class="game-subtext">Don't click yet!</div>
+  </div>
+
+  <div class="screen" id="goScreen">
+    <div class="game-text" style="color:#fff">Click now!</div>
+    <div class="game-subtext">As fast as you can!</div>
+  </div>
+
+  <div class="screen" id="resultScreen">
+    <div class="reaction-time" id="reactionTime"></div>
+    <div class="rating" id="reactionRating"></div>
+    <div class="game-subtext" id="clickContinue">Click anywhere to continue</div>
+  </div>
+
+  <div class="screen" id="tooSoonScreen">
+    <div class="game-text" style="color:#ff6b6b">Too soon!</div>
+    <div class="game-subtext">Wait for the green screen</div>
+  </div>
+
+  <div class="screen" id="finalScreen">
+    <p class="results-label">Average Reaction Time</p>
+    <div class="results-avg" id="avgTime"></div>
+    <div class="results-rating" id="avgRating"></div>
+    <div class="history" id="history"></div>
+    <button class="btn" id="retryBtn">Try Again</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var game = document.getElementById('game');
+  var screens = {
+    start: document.getElementById('startScreen'),
+    wait: document.getElementById('waitScreen'),
+    go: document.getElementById('goScreen'),
+    result: document.getElementById('resultScreen'),
+    tooSoon: document.getElementById('tooSoonScreen'),
+    final: document.getElementById('finalScreen')
+  };
+  var roundCounter = document.getElementById('roundCounter');
+  var roundNum = document.getElementById('roundNum');
+  var reactionTimeEl = document.getElementById('reactionTime');
+  var reactionRatingEl = document.getElementById('reactionRating');
+  var avgTimeEl = document.getElementById('avgTime');
+  var avgRatingEl = document.getElementById('avgRating');
+  var historyEl = document.getElementById('history');
+
+  var state = 'start';
+  var times = [];
+  var round = 0;
+  var totalRounds = 5;
+  var timeout = null;
+  var greenAt = 0;
+
+  function showScreen(name) {
+    Object.keys(screens).forEach(function(k) {
+      screens[k].classList.remove('active');
+    });
+    screens[name].classList.add('active');
+    screens[name].classList.remove('fade-in');
+    void screens[name].offsetWidth;
+    screens[name].classList.add('fade-in');
+  }
+
+  function getRating(ms) {
+    if (ms < 200) return { text: 'Lightning!', color: '#ffdd00' };
+    if (ms < 300) return { text: 'Fast!', color: '#00ff88' };
+    if (ms < 400) return { text: 'Average', color: '#00d4ff' };
+    return { text: 'Keep trying', color: '#ff6b6b' };
+  }
+
+  function startRound() {
+    round++;
+    roundNum.textContent = round;
+    roundCounter.style.display = 'block';
+    state = 'waiting';
+    game.className = 'waiting';
+    showScreen('wait');
+
+    var delay = 1000 + Math.random() * 4000;
+    timeout = setTimeout(function() {
+      state = 'go';
+      game.className = 'go';
+      greenAt = performance.now();
+      showScreen('go');
+    }, delay);
+  }
+
+  function showResult(ms) {
+    times.push(ms);
+    state = 'result';
+    game.className = '';
+
+    var rating = getRating(ms);
+    reactionTimeEl.textContent = ms + 'ms';
+    reactionRatingEl.textContent = rating.text;
+    reactionRatingEl.style.color = rating.color;
+    showScreen('result');
+  }
+
+  function showTooSoon() {
+    clearTimeout(timeout);
+    state = 'tooSoon';
+    game.className = 'too-soon';
+    round--;
+    showScreen('tooSoon');
+
+    setTimeout(function() {
+      startRound();
+    }, 1200);
+  }
+
+  function showFinal() {
+    state = 'final';
+    game.className = '';
+    roundCounter.style.display = 'none';
+
+    var sum = times.reduce(function(a, b) { return a + b; }, 0);
+    var avg = Math.round(sum / times.length);
+    var best = Math.min.apply(null, times);
+
+    var rating = getRating(avg);
+    avgTimeEl.textContent = avg + 'ms';
+    avgRatingEl.textContent = rating.text;
+    avgRatingEl.style.color = rating.color;
+
+    historyEl.innerHTML = '';
+    times.forEach(function(t, i) {
+      var item = document.createElement('div');
+      item.className = 'history-item' + (t === best ? ' best' : '');
+      item.innerHTML =
+        '<span class="round-label">Round ' + (i + 1) + '</span>' +
+        '<span class="time-value">' + t + 'ms</span>';
+      historyEl.appendChild(item);
+    });
+
+    showScreen('final');
+  }
+
+  function reset() {
+    times = [];
+    round = 0;
+    state = 'start';
+    game.className = '';
+    roundCounter.style.display = 'none';
+  }
+
+  function handleClick(e) {
+    if (e.target.tagName === 'BUTTON') return;
+
+    switch (state) {
+      case 'waiting':
+        showTooSoon();
+        break;
+      case 'go':
+        var ms = Math.round(performance.now() - greenAt);
+        showResult(ms);
+        break;
+      case 'result':
+        if (round >= totalRounds) {
+          showFinal();
+        } else {
+          startRound();
+        }
+        break;
+    }
+  }
+
+  game.addEventListener('click', handleClick);
+  game.addEventListener('touchend', function(e) {
+    if (e.target.tagName !== 'BUTTON') {
+      e.preventDefault();
+    }
+  });
+
+  document.getElementById('startBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    startRound();
+  });
+
+  document.getElementById('retryBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    reset();
+    startRound();
+  });
+})();
+</script>
+</body>
+</html>

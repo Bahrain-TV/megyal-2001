@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Match</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1a2e;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  padding: 20px;
+}
+
+.screen.active { display: flex; }
+
+h1 {
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #e94560, #0f3460);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5em;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  background: linear-gradient(135deg, #e94560, #0f3460);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.8em;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: #8888aa;
+  margin-bottom: 2em;
+}
+
+.btn {
+  padding: 14px 48px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #e94560, #c23152);
+  color: #fff;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(233, 69, 96, 0.3);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(233, 69, 96, 0.5);
+}
+
+.btn:active { transform: translateY(0); }
+
+.stats {
+  display: flex;
+  gap: 2em;
+  margin-bottom: 1.2em;
+  font-size: 1.1rem;
+}
+
+.stats span { color: #8888aa; }
+.stats strong { color: #e94560; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(8px, 2vw, 14px);
+  width: min(90vw, 460px);
+  aspect-ratio: 1;
+}
+
+.card {
+  perspective: 800px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.card.flipped .card-inner { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-front {
+  background: #16213e;
+  border: 2px solid #1a2744;
+  font-size: 2rem;
+  color: #2a3a5e;
+}
+
+.card-front::after {
+  content: '?';
+  font-weight: 700;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+}
+
+.card-back {
+  background: #16213e;
+  border: 2px solid #0f3460;
+  transform: rotateY(180deg);
+  font-size: clamp(2rem, 7vw, 3rem);
+}
+
+.card.matched .card-back {
+  border-color: #e94560;
+  box-shadow: 0 0 18px rgba(233, 69, 96, 0.5), inset 0 0 18px rgba(233, 69, 96, 0.1);
+}
+
+.card.matched { pointer-events: none; }
+
+.result-stats {
+  font-size: 1.3rem;
+  line-height: 2;
+  margin-bottom: 1.5em;
+}
+
+.result-stats strong { color: #e94560; }
+</style>
+</head>
+<body>
+
+<div id="start" class="screen active">
+  <h1>Memory Match</h1>
+  <p class="subtitle">Find all matching pairs</p>
+  <button class="btn" onclick="startGame()">Play</button>
+</div>
+
+<div id="game" class="screen">
+  <div class="stats">
+    <div><span>Time:</span> <strong id="timer">0:00</strong></div>
+    <div><span>Moves:</span> <strong id="moves">0</strong></div>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div id="win" class="screen">
+  <h2>You Win!</h2>
+  <div class="result-stats">
+    <div>Time: <strong id="finalTime"></strong></div>
+    <div>Moves: <strong id="finalMoves"></strong></div>
+  </div>
+  <button class="btn" onclick="startGame()">Play Again</button>
+</div>
+
+<script>
+const EMOJIS = ['🚀', '🎯', '🔮', '🎲', '🌙', '⚡', '🎵', '🦊'];
+let firstCard, secondCard, lockBoard, moves, matchCount, seconds, timerInterval;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function formatTime(s) {
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function startGame() {
+  clearInterval(timerInterval);
+  firstCard = secondCard = null;
+  lockBoard = false;
+  moves = 0;
+  matchCount = 0;
+  seconds = 0;
+
+  document.getElementById('moves').textContent = '0';
+  document.getElementById('timer').textContent = '0:00';
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  const cards = shuffle([...EMOJIS, ...EMOJIS]);
+
+  cards.forEach(emoji => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.emoji = emoji;
+    card.innerHTML = `<div class="card-inner"><div class="card-face card-front"></div><div class="card-face card-back">${emoji}</div></div>`;
+    card.addEventListener('click', flipCard);
+    grid.appendChild(card);
+  });
+
+  showScreen('game');
+
+  timerInterval = setInterval(() => {
+    seconds++;
+    document.getElementById('timer').textContent = formatTime(seconds);
+  }, 1000);
+}
+
+function flipCard() {
+  if (lockBoard || this === firstCard || this.classList.contains('flipped')) return;
+
+  this.classList.add('flipped');
+
+  if (!firstCard) {
+    firstCard = this;
+    return;
+  }
+
+  secondCard = this;
+  lockBoard = true;
+  moves++;
+  document.getElementById('moves').textContent = moves;
+
+  if (firstCard.dataset.emoji === secondCard.dataset.emoji) {
+    firstCard.classList.add('matched');
+    secondCard.classList.add('matched');
+    matchCount++;
+    resetTurn();
+    if (matchCount === EMOJIS.length) endGame();
+  } else {
+    setTimeout(() => {
+      firstCard.classList.remove('flipped');
+      secondCard.classList.remove('flipped');
+      resetTurn();
+    }, 800);
+  }
+}
+
+function resetTurn() {
+  firstCard = secondCard = null;
+  lockBoard = false;
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  setTimeout(() => {
+    document.getElementById('finalTime').textContent = formatTime(seconds);
+    document.getElementById('finalMoves').textContent = moves;
+    showScreen('win');
+  }, 600);
+}
+</script>
+</body>
+</html>
